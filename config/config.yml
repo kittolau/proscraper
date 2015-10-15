@@ -1,0 +1,26 @@
+default:
+  logger: &logger
+    name: webot
+    #level 'CRITICAL','ERROR','WARNING','INFO','DEBUG'
+
+development:
+  logger:
+    <<: *logger
+    file_log:
+      filename: debug_log.log
+      level: DEBUG
+    stdout_log:
+      level: DEBUG
+  selenium:
+    type: remote
+    remote_server_path: http://192.168.33.1:4444/wd/hub
+    #proxy_host: 36.238.87.236
+    #proxy_port: 3128
+  mongo:
+    database: webot_development
+    host: 127.0.0.1
+    port: 27017
+  beanstalkd:
+    tube_name: nodejs_scraper
+    host: 127.0.0.1
+    port: 11300
