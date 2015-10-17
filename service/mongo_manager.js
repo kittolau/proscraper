@@ -26,7 +26,7 @@ MongeManager.prototype.getDB = function (){
 
 MongeManager.prototype.getPromisifiedCollection = function(collection_name){
 	var db = this.getDB();
-	var collection = db.collection('users', {strict: true});
+	var collection = db.collection(collection_name, {strict: true});
 	Promise.promisifyAll(collection);
 	return collection;
 };

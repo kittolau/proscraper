@@ -12,9 +12,10 @@ var main = function(){
 
     var seedQueueClient = new BeanstalkdManager();
     var urlRequest = new URLRequest("http://www.getproxy.jp/en/",'');
-    seedQueueClient.putJob(urlRequest).then(function(){
-        seedQueueClient.close();
-    });
+    for (var i = 0; i < 200; i++) {
+      seedQueueClient.putURLRequest(urlRequest);
+    }
+
 
 };
 

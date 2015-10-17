@@ -11,12 +11,11 @@ var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
 var main = function(){
 
     var seedQueueClient = new BeanstalkdManager();
-    var urlRequest = new URLRequest("http://www.getproxy.jp/en/",'');
     co(function *(){
       while(true){
-        yield seedQueueClient.consumeJob(urlRequest);
+        yield seedQueueClient.consumeURLRequest();
       }
-    });
+    }).catch(logger.error);
 
 };
 

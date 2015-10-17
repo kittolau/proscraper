@@ -4,13 +4,16 @@ default:
     #level 'CRITICAL','ERROR','WARNING','INFO','DEBUG'
 
 development:
+  scraper:
+    globalMaxSockets: 20
+    cluster_mode: 0
   logger:
     <<: *logger
     file_log:
       filename: debug_log.log
-      level: DEBUG
+      level: WARN
     stdout_log:
-      level: DEBUG
+      level: WARN
   selenium:
     type: remote
     remote_server_path: http://192.168.33.1:4444/wd/hub
@@ -21,6 +24,6 @@ development:
     host: 127.0.0.1
     port: 27017
   beanstalkd:
-    tube_name: nodejs_scraper
+    tube_name: node_promise_scraper_development
     host: 127.0.0.1
     port: 11300
