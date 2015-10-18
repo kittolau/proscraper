@@ -12,13 +12,13 @@ var BeanstalkdManager = function () {
   this.putClientPromise = this.__buildClientPromise();
 };
 
-BeanstalkdManager.prototype.close = co.wrap(function* (){
-  // yield this.clientPromise
-  // .then(function(client){
-  //   client.disconnect();
-
-  // });
-});
+BeanstalkdManager.prototype.close = function (){
+  this.clientPromise
+  .then(function(client){
+    client.stop();
+  })
+  .catch(logger.error);
+};
 
 BeanstalkdManager.prototype.putURLRequest = co.wrap(function* (urlRequest, priority, delay, ttr){
   if(urlRequest.constructor.name !== 'URLRequest'){
@@ -38,7 +38,7 @@ BeanstalkdManager.prototype.__putJob = function (payload, priority, delay, ttr){
     return client.putAsync(priority, delay, ttr, JSON.stringify(payload));
   })
   .then(function(jobid){
-    logger.info("Created job #" + jobid);
+    logger.debug("Created job #" + jobid);
   });
 };
 
@@ -57,7 +57,7 @@ BeanstalkdManager.prototype.__consumeJob = co.wrap(function*(){
 
   var jobId  = job[0];
   var payload = JSON.parse(job[1]);
-  logger.info("Consumed job #" + jobId);
+  logger.debug("Consumed job #" + jobId);
   logger.debug(payload);
 
   return payload;
@@ -66,7 +66,7 @@ BeanstalkdManager.prototype.__consumeJob = co.wrap(function*(){
 BeanstalkdManager.prototype.__useTube = function(client, tubeName){
   return client.useAsync(tubeName) // the tubes which .put() puts to
   .then(function(retTubeName) {
-    logger.info("Using tube: '" + tubeName + "'");
+    logger.debug("Using tube: '" + tubeName + "'");
   });
 
 };
@@ -74,7 +74,7 @@ BeanstalkdManager.prototype.__useTube = function(client, tubeName){
 BeanstalkdManager.prototype.__watchTube = function(client, tubeName){
   return client.watchAsync(tubeName) // the tubes which .reserve() is subscribed to
   .then(function(retTubeNumber) {
-    logger.info("Watching tube: '" + tubeName + "')");
+    logger.debug("Watching tube: '" + tubeName + "')");
   });
 };
 
@@ -91,7 +91,7 @@ BeanstalkdManager.prototype.__buildClientPromise = co.wrap(function* (){
     .on('connect', function()
     {
         // client can now be used
-        logger.info("Beanstalkd connection up");
+        logger.debug("Beanstalkd connection up");
         resolve(client);
     })
     .on('error', function(err)
@@ -102,7 +102,7 @@ BeanstalkdManager.prototype.__buildClientPromise = co.wrap(function* (){
     .on('close', function()
     {
         // underlying connection has closed
-        logger.info("Beanstalkd connection down");
+        logger.debug("Beanstalkd connection down");
     })
     .connect();
   });

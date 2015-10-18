@@ -5,8 +5,12 @@ default:
 
 development:
   scraper:
+    #controller_count & sockets = 20:
+    #  almost the most efficient, it wont scale up much even increase the count
     globalMaxSockets: 20
-    cluster_mode: 0
+    cluster_mode: 1
+    controller_count: 20
+    retry_count: 0
   logger:
     <<: *logger
     file_log:

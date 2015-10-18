@@ -67,11 +67,11 @@ AgentLoader.prototype.__bliudAgentMappings = co.wrap(function* (){
         }
       }
 
-      logger.info("Agent config loaded: " + filePath);
+      logger.debug("Agent config loaded: " + filePath);
     });
   });
 
-  logger.info("Agent config Loaded Completely");
+  logger.debug("Agent config Loaded Completely");
 
   return agentMappings;
 });

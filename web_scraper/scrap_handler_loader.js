@@ -11,7 +11,6 @@ var http                 = require('http');
 var Loader               = rootRequire('web_scraper/loader');
 var AbstractScrapHandler = rootRequire('web_scraper/abstract_scrap_handler');
 
-
 function ScrapHandlerLoader() {
   Loader.call(this);
 
@@ -46,7 +45,7 @@ ScrapHandlerLoader.prototype.__bliudScrapHandlersPromise = co.wrap(function* (){
       var urlPattern           = HandlerClass.prototype.getHandleableURLPattern();
 
       handlers.push({'urlPattern':urlPattern, 'handlerClass':HandlerClass});
-      logger.info("Handler loaded: " + scrapHandlerPath);
+      logger.debug("Handler loaded: " + scrapHandlerPath);
     });
   });
 

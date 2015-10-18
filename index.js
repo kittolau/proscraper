@@ -3,76 +3,30 @@
 global.rootRequire = function(name) {
     return require(__dirname + '/' + name);
 };
-var http              = require('http');
-var Promise           = require('bluebird');
 var os                = require("os");
+var process = require('process');
 var cluster           = require('cluster');
-var co                = require('co');
-var ScrapHandlerLoader   = rootRequire("web_scraper/scrap_handler_loader");
+var WebScraperProcess   = rootRequire("web_scraper/web_scraper_process");
 var AgentConfigLoader   = rootRequire("web_scraper/agent_config_loader");
-var URLRequest        = rootRequire('web_scraper/url_request');
 var logger            = rootRequire('service/logger_manager');
-var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
-var MongoManager      = rootRequire('service/mongo_manager');
 var config     = rootRequire('config');
 
-function WebScraperController(i,agentConfigLoader) {
-  var self=this;
-  this.id = i;
-  this.agentConfigLoader = agentConfigLoader;
-  this.beanstalkdClient = new BeanstalkdManager();
-  this.mongodbClient    = new MongoManager();
-  this.scrapHandlerLoader  = new ScrapHandlerLoader();
-  this.isStopped   = false;
-}
-
-WebScraperController.prototype.down = function (){
-  this.mongodbClient.close();
-};
-
-WebScraperController.prototype.onSeriousError = function(err) {
-  logger.error(err.stack);
-  process.exit(1);
-};
-
-WebScraperController.prototype.onMinorError = function(err){
-  logger.warn(err.stack);
-};
-
-WebScraperController.prototype.up = function (){
-    var self = this;
-    logger.info("web scraper up and running..");
-    co(function *(){
-        while(!self.isStopped){
-            console.time(self.id + "task-time")
-            var urlRequest = yield self.beanstalkdClient.consumeURLRequest();
-            var services   = {
-            'beanstalkdClient': self.beanstalkdClient,
-            'mongodbClient': self.mongodbClient
-            };
-
-            var HandlerClass = yield self.scrapHandlerLoader.getHandlerClassFor(urlRequest.url);
-            if(HandlerClass === undefined){
-              continue;
-            }
-
-            var agent = yield self.agentConfigLoader.findAgentFor(urlRequest.url);
-
-            var handler = new HandlerClass(services,agent);
-
-            yield handler
-            .handle(urlRequest)
-            .catch(self.onMinorError.bind(self));
-            console.timeEnd(self.id + "task-time")
-        }
-    })
-    .catch(self.onSeriousError.bind(self));
-};
-
 var main = function(){
-  http.globalAgent.maxSockets = config.scraper.globalMaxSockets;
-  //unlimit the Event Emitter
-  process.setMaxListeners(0);
+
+  var workerProcess = null;
+
+  process.on('SIGINT', function() {
+      logger.warn("\nGracefully shutting down from SIGINT (Ctrl+C)");
+      if(workerProcess !== null){
+        workerProcess.down();
+      }
+
+      console.timeEnd("process.pid")
+
+      process.exit(0);
+  });
+
+  console.time("process.pid")
 
   if(config.scraper.cluster_mode === 1){
     if(cluster.isMaster) {
@@ -87,7 +41,7 @@ var main = function(){
       });
 
       cluster.on('listening', function(worker, address) {
-        console.log("A worker is now connected to " + address.address + ":" + address.port);
+        logger.log("A worker is now connected to " + address.address + ":" + address.port);
       });
 
       cluster.on('exit', function(worker, code, signal) {
@@ -96,32 +50,17 @@ var main = function(){
           cluster.fork();
       });
     } else {
-        var agentConfigLoader = new AgentConfigLoader();
-        var controller = new WebScraperController(agentConfigLoader).up();
+      workerProcess = new WebScraperProcess(process.pid, config.scraper.controller_count);
+      workerProcess.applyProcessGlobalSetting();
+      workerProcess.up();
     }
   }else{
-
-    var controllerList = [];
-
-    var agentConfigLoader = new AgentConfigLoader();
-    for (var i = 5 - 1; i >= 0; i--) {
-      var controller = new WebScraperController(i,agentConfigLoader);
-      controllerList.push(controller);
-
-      controller.up();
-    }
-
-    process.on('SIGINT', function() {
-        logger.info("\nGracefully shutting down from SIGINT (Ctrl+C)");
-        for (var i = controllerList.length - 1; i >= 0; i--) {
-          controllerList[i].down();
-        }
-        process.exit(0);
-    });
+    workerProcess = new WebScraperProcess(process.pid, config.scraper.controller_count);
+    workerProcess.applyProcessGlobalSetting();
+    workerProcess.up();
   }
 };
 
 if (require.main === module) {
-
     main();
 }
