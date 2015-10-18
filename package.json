@@ -16,6 +16,7 @@
     "mongodb": "^2.0.45",
     "mongoskin": "^2.0.1",
     "request": "^2.51.0",
+    "socksv5": "0.0.6",
     "syntax-error": "^1.1.4"
   }
 }

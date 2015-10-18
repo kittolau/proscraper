@@ -1,23 +1,22 @@
 /* jshint node: true, esnext:true */
 'use strict';
-var http              = require('http');
-var Promise           = require('bluebird');
-var os                = require("os");
-var cluster           = require('cluster');
-var co                = require('co');
-var ScrapHandlerLoader   = rootRequire("web_scraper/scrap_handler_loader");
-var AgentConfigLoader   = rootRequire("web_scraper/agent_config_loader");
-var URLRequest        = rootRequire('web_scraper/url_request');
-var logger            = rootRequire('service/logger_manager');
-var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
-var MongoManager      = rootRequire('service/mongo_manager');
-var config     = rootRequire('config');
+var http               = require('http');
+var Promise            = require('bluebird');
+var os                 = require("os");
+var cluster            = require('cluster');
+var co                 = require('co');
+var ScrapHandlerLoader = rootRequire("web_scraper/scrap_handler_loader");
+var URLRequest         = rootRequire('web_scraper/url_request');
+var logger             = rootRequire('service/logger_manager');
+var BeanstalkdManager  = rootRequire("service/beanstalkd_manager");
+var MongoManager       = rootRequire('service/mongo_manager');
+var config             = rootRequire('config');
 
-function WebScraperController(pid, id, agentConfigLoader) {
+function WebScraperController(pid, id, domainConfigLoader) {
   var self=this;
   this.pid = pid;
   this.id = id;
-  this.agentConfigLoader = agentConfigLoader;
+  this.domainConfigLoader = domainConfigLoader;
   this.beanstalkdClient = new BeanstalkdManager();
   this.mongodbClient    = new MongoManager();
   this.scrapHandlerLoader  = new ScrapHandlerLoader();
@@ -68,8 +67,8 @@ WebScraperController.prototype.up = function (){
               continue;
             }
 
-            var agent = yield self.agentConfigLoader.findAgentFor(urlRequest.url);
-            var handler = new HandlerClass(services,agent);
+            var domainConfig = yield self.domainConfigLoader.findConfigFor(urlRequest.url);
+            var handler = new HandlerClass(services,domainConfig);
 
             yield handler
             .handle(urlRequest)

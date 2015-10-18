@@ -1,24 +1,24 @@
 /* jshint node: true, esnext:true */
-var http              = require('http');
-var os                = require("os");
-var cluster           = require('cluster');
-var co                = require('co');
-var WebScraperController   = rootRequire("web_scraper/web_scraper_controller");
-var AgentConfigLoader   = rootRequire("web_scraper/agent_config_loader");
-var URLRequest        = rootRequire('web_scraper/url_request');
-var logger            = rootRequire('service/logger_manager');
-var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
-var MongoManager      = rootRequire('service/mongo_manager');
-var config     = rootRequire('config');
+var http                 = require('http');
+var os                   = require("os");
+var cluster              = require('cluster');
+var co                   = require('co');
+var WebScraperController = rootRequire("web_scraper/web_scraper_controller");
+var DomainConfigLoader   = rootRequire("web_scraper/domain_config_loader");
+var URLRequest           = rootRequire('web_scraper/url_request');
+var logger               = rootRequire('service/logger_manager');
+var BeanstalkdManager    = rootRequire("service/beanstalkd_manager");
+var MongoManager         = rootRequire('service/mongo_manager');
+var config               = rootRequire('config');
 
 function WebScraperProcess(pid, numberOfController){
   var self = this;
   this.pid = pid;
   this.controllerList = [];
-  this.agentConfigLoader = new AgentConfigLoader();
+  this.domainConfigLoader = new DomainConfigLoader();
 
   for (var i = numberOfController - 1; i >= 0; i--) {
-    var controller = new WebScraperController(this.pid, i, this.agentConfigLoader);
+    var controller = new WebScraperController(this.pid, i, this.domainConfigLoader);
     this.controllerList.push(controller);
   }
 }

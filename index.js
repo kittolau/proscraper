@@ -4,12 +4,11 @@ global.rootRequire = function(name) {
     return require(__dirname + '/' + name);
 };
 var os                = require("os");
-var process = require('process');
+var process           = require('process');
 var cluster           = require('cluster');
-var WebScraperProcess   = rootRequire("web_scraper/web_scraper_process");
-var AgentConfigLoader   = rootRequire("web_scraper/agent_config_loader");
+var WebScraperProcess = rootRequire("web_scraper/web_scraper_process");
 var logger            = rootRequire('service/logger_manager');
-var config     = rootRequire('config');
+var config            = rootRequire('config');
 
 var main = function(){
 

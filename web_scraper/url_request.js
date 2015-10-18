@@ -23,11 +23,9 @@ URLRequest.createFromFailedURLRequest = function(urlRequest){
   return newURLRequest;
 };
 
-URLRequest.getRetryCount = function(){
+URLRequest.prototype.getRetryCount = function(){
   return this.retryCount;
 };
-
-
 
 URLRequest.prototype.toString = function()
 {

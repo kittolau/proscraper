@@ -8,11 +8,11 @@ var request    = Promise.promisify(require('request'));
 var config     = rootRequire('config');
 var URLRequest = rootRequire('web_scraper/url_request');
 
-function AbstractScrapHandler(services, agent) {
+function AbstractScrapHandler(services, domainConfig) {
   this.beanstalkdClient = services.beanstalkdClient;
   this.mongodbClient    = services.mongodbClient;
 
-  this.agent            = agent;
+  this.domainConfig     = domainConfig;
 }
 
 AbstractScrapHandler.prototype.getHandleableURLPattern = function (){
@@ -52,17 +52,35 @@ AbstractScrapHandler.prototype.saveText = co.wrap(function*(filename,content){
   yield this.writeFile(filepath, content);
 });
 
-AbstractScrapHandler.prototype.getPageSource = co.wrap(function*(url){
+AbstractScrapHandler.prototype.extendJSON = function (target) {
+    var sources = [].slice.call(arguments, 1);
+
+    for (var i = sources.length - 1; i >= 0; i--) {
+      var source = sources[i];
+      for (var prop in source) {
+            target[prop] = source[prop];
+        }
+    }
+
+    return target;
+};
+
+AbstractScrapHandler.prototype.getPageSource = co.wrap(function*(url, method, overriddenRequestConfig){
+
+  method = method || "GET";
+
   var requestConfig = {
     url : url,
-    method : "GET",
-    followRedirect : true,
-    timeout : 10000,
-    agent: false
+    method : method,
   };
 
-  if(this.agent !== undefined){
-    requestConfig.agent = this.agent;
+  if(this.domainConfig !== undefined || this.domainConfig !== null){
+    var domainRequestConfig = yield this.domainConfig.getRequestConfig(url);
+    this.extendJSON(requestConfig,domainRequestConfig);
+  }
+
+  if(overriddenRequestConfig !== undefined || overriddenRequestConfig !== null){
+    this.extendJSON(requestConfig,overriddenRequestConfig);
   }
 
   var result = yield request(requestConfig)
