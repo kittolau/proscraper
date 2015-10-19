@@ -3,7 +3,7 @@
 
 function URLRequest(url,payload) {
   this.url     = url || '';
-  this.payload = payload || '';
+  this.payload = payload || {};
   this.retryCount = 0;
 }
 

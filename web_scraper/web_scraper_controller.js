@@ -39,13 +39,13 @@ WebScraperController.prototype.onHandlerError = function(err){
   var beanstalkdClient = this.beanstalkdClient;
 
   if(urlRequest.getRetryCount() >= config.scraper.retry_count){
-    logger.error("Failed to scrap "+ urlRequest.url + ":\n"+err.stack);
+    logger.error("Failed to scrap "+ urlRequest.url + ":\n" + err+"\n"+err.stack);
   }else{
     var retryUrlRequest = URLRequest.createFromFailedURLRequest(urlRequest);
     beanstalkdClient
     .putURLRequest(retryUrlRequest)
     .catch(logger.error);
-    logger.warn("Retry to scrap "+ urlRequest.url + ":\n"+err.stack);
+    logger.warn("Retry to scrap "+ urlRequest.url + ":\n"+err+"\n"+err.stack);
   }
 };
 
@@ -80,7 +80,7 @@ WebScraperController.prototype.up = function (){
 
             var duration = Date.now() - startTime;
 
-            logger.debug("Controller "+ self.pid+ "-"+self.id+" used "+duration+" to complete job");
+            logger.debug("Controller "+ self.pid+ "-"+self.id+" used "+duration+"ms to complete job");
         }
     })
     .catch(self.onSeriousError.bind(self));

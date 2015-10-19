@@ -34,7 +34,7 @@ var main = function(){
   workerProcess.up();
 
   var seedQueueClient = new BeanstalkdManager();
-  var urlRequest = new URLRequest("http://www.google.com/en/",'');
+  var urlRequest = new URLRequest("http://www.getproxy.jp/en/",'');
   seedQueueClient
   .putURLRequest(urlRequest)
   .then(function(){

@@ -16,7 +16,7 @@ development:
     #Maximum global socket per process
     globalMaxSockets: 20
     #Number of WebScraperController per process
-    controller_count: 20
+    controller_count: 1
     #cluster_mode = 0:
     #  there will be only one WebScraperProcess
     #cluster_mode = 1:
@@ -26,9 +26,9 @@ development:
     <<: *logger
     file_log:
       filename: debug_log.log
-      level: WARN
+      level: DEBUG
     stdout_log:
-      level: WARN
+      level: DEBUG
   selenium:
     type: remote
     remote_server_path: http://192.168.33.1:4444/wd/hub
