@@ -17,24 +17,15 @@ ExampleHandler.prototype.getHandleableURLPattern = function (){
   return /what-ever-site-you-want\.com\/hk\/(?:posts\/\d+|$)/g;
 };
 
-//if dont yield promise, then use  this.onError to catch error
-ExampleHandler.prototype.handle = co.wrap(function*(urlRequest){
-  var url        = urlRequest.url;
-  var payload    = urlRequest.payload;
-  var pageSource = yield this.getPageSource(url)
-  .then(cheerio.load)
-  .then(this.scrap.bind(this));
-});
-
 //test the code in chrome first
-ExampleHandler.prototype.scrap = co.wrap(function*($){
+getProxyJPHandler.prototype.scrap = co.wrap(function*($){
   var self = this;
   var promises = [];
 
-  //logger.debug("scrapping...");
+  var allDomainLink = this.getLinksContains("getproxy.jp");
 
-  var nextPageUrl = $('a[title="next page"]').attr("href");
-  if(typeof nextPageUrl !== 'undefined'){
+  var nextPageUrl = this.getLinkByCSS('a[title="next page"]');
+  if(nextPageUrl !== undefined){
     self.putURLRequest(nextPageUrl).catch(self.onError);
   }
 
@@ -79,6 +70,8 @@ ExampleHandler.prototype.scrap = co.wrap(function*($){
   });
 
   yield promises;
+
+  logger.debug("scrapped");
 });
 
-module.exports = ExampleHandler;
+module.exports = getProxyJPHandler;
