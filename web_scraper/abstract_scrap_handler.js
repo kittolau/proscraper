@@ -7,6 +7,7 @@ var co         = require('co');
 var request    = Promise.promisify(require('request'));
 var config     = rootRequire('config');
 var URLRequest = rootRequire('web_scraper/url_request');
+var logger     = rootRequire('service/logger_manager');
 
 function AbstractScrapHandler(services, domainConfig) {
   this.beanstalkdClient = services.beanstalkdClient;
@@ -29,6 +30,12 @@ AbstractScrapHandler.prototype.maxConnection = function (){
 
 AbstractScrapHandler.prototype.handle = function (urlRequest){
     throw new Error('handle() is not implemented in ' + this.constructor.name);
+};
+
+//if the handle function dont yield promise, should use this function to capture error
+AbstractScrapHandler.prototype.onError = function(err) {
+  logger.error(err);
+  logger.error(err.stack);
 };
 
 AbstractScrapHandler.prototype.putURLRequest = co.wrap(function*(nextPageUrl,payload){
@@ -72,6 +79,10 @@ AbstractScrapHandler.prototype.getPageSource = co.wrap(function*(url, method, ov
   var requestConfig = {
     url : url,
     method : method,
+    followRedirect : true,
+    maxRedirects: 10,
+    timeout : 10000,
+    agent : false
   };
 
   if(this.domainConfig !== undefined || this.domainConfig !== null){
@@ -83,26 +94,47 @@ AbstractScrapHandler.prototype.getPageSource = co.wrap(function*(url, method, ov
     this.extendJSON(requestConfig,overriddenRequestConfig);
   }
 
+  if(this.domainConfig.onRequestStart !== undefined){
+    this.domainConfig.onRequestStart(url,method,overriddenRequestConfig);
+  }
+
   var result = yield request(requestConfig)
   .catch(function(err){
+
+    var errCode = err.code;
+
     if(err.code === 'ETIMEDOUT'){
       if(err.connect === true){
+
         //connection timeout
-        throw new Error("Connection timtout: " + url);
+        errCode += '_CONNECTION' ;
+        throw new Error("Connection timeout: " + url);
       }else{
+
         //read timout Or others
-        throw new Error("Read timtout: " + url);
+        errCode += '_READ' ;
+        throw new Error("Read timeout: " + url);
       }
     }else if(err.code === 'ECONNRESET'){
+
       //Connection reset by peer
       throw new Error("Connection reset by peer: " + url);
     }else if(err.code === 'ECONNREFUSED'){
+
       //Connection refused by target machine actively
       throw new Error("Connection refused: " + url);
     }else{
       throw new Error("Unknown error: " + err);
     }
+
+    if(this.domainConfig.onRequestERR !== undefined){
+    this.domainConfig.onRequestERR(url,errCode);
+  }
   });
+
+  if(this.domainConfig.onRequestFinish !== undefined){
+    this.domainConfig.onRequestFinish(url,method,overriddenRequestConfig);
+  }
 
   return result[1];
 });

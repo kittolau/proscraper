@@ -15,8 +15,6 @@ var main = function(){
     for (var i = 0; i < 200; i++) {
       seedQueueClient.putURLRequest(urlRequest);
     }
-
-
 };
 
 if (require.main === module) {

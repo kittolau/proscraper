@@ -1,5 +1,5 @@
 /* jshint node: true, esnext:true */
-'use strict';
+//'use strict';
 global.rootRequire = function(name) {
     return require(__dirname + '/' + name);
 };
@@ -11,18 +11,31 @@ var config     = rootRequire('config');
 
 var main = function(){
 
-    function lookUpTubeStat(client){
-      return client.stats_tubeAsync(config.beanstalkd.tube_name);
-    }
+  function lookUpTubeStat(client){
+    return client.stats_tubeAsync(config.beanstalkd.tube_name);
+  }
 
-    var seedQueueClient = new BeanstalkdManager();
+  function clearConsole(){
+    console.log('\033[2J');
+  }
 
-    setInterval(function() {
-        seedQueueClient
-      .clientPromise
-      .then(lookUpTubeStat)
-      .then(console.log);
-    }, 1000);
+  var seedQueueClient = new BeanstalkdManager();
+  var startTime = Date.now();
+
+  setInterval(function() {
+    seedQueueClient
+    .clientPromise
+    .then(lookUpTubeStat)
+    .then(function(s){
+      clearConsole();
+      return s;
+    })
+    .then(console.log)
+    .then(function(){
+      var duration = Date.now() - startTime;
+      console.log("Duration: " + duration+"ms");
+    });
+  }, 1000);
 };
 
 if (require.main === module) {

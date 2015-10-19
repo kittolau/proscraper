@@ -20,12 +20,12 @@ var main = function(){
         workerProcess.down();
       }
 
-      console.timeEnd("process.pid")
+      console.timeEnd("pid "+ process.pid);
 
       process.exit(0);
   });
 
-  console.time("process.pid")
+  console.time("pid "+ process.pid);
 
   if(config.scraper.cluster_mode === 1){
     if(cluster.isMaster) {
@@ -45,8 +45,8 @@ var main = function(){
 
       cluster.on('exit', function(worker, code, signal) {
           logger.warn('Worker ' + worker.process.pid + ' died with code: ' + code + ', and signal: ' + signal);
-          logger.warn('Starting a new worker');
-          cluster.fork();
+          // logger.warn('Starting a new worker');
+          // cluster.fork();
       });
     } else {
       workerProcess = new WebScraperProcess(process.pid, config.scraper.controller_count);

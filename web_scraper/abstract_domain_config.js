@@ -14,6 +14,6 @@ AbstractDomainConfig.prototype.getRequestConfig = co.wrap(function* (uri){
 
 AbstractDomainConfig.prototype.isHTTPS = function(uri){
   return uri.match(/https:\/\//g);
-}
+};
 
 module.exports = AbstractDomainConfig;

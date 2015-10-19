@@ -13,28 +13,29 @@ var MongoManager       = rootRequire('service/mongo_manager');
 var config             = rootRequire('config');
 
 function WebScraperController(pid, id, domainConfigLoader) {
-  var self=this;
-  this.pid = pid;
-  this.id = id;
+  this.pid                = pid;
+  this.id                 = id;
   this.domainConfigLoader = domainConfigLoader;
-  this.beanstalkdClient = new BeanstalkdManager();
-  this.mongodbClient    = new MongoManager();
-  this.scrapHandlerLoader  = new ScrapHandlerLoader();
-  this.isStopped   = false;
+  this.scrapHandlerLoader = new ScrapHandlerLoader();
+  this.isStopped          = false;
+  this.beanstalkdClient   = new BeanstalkdManager();
+  this.mongodbClient      = new MongoManager();
 }
 
 WebScraperController.prototype.down = function (){
+  this.isStopped = true;
   this.mongodbClient.close();
   this.beanstalkdClient.close();
 };
 
 WebScraperController.prototype.onSeriousError = function(err) {
+  logger.error(err);
   logger.error(err.stack);
   process.exit(1);
 };
 
 WebScraperController.prototype.onHandlerError = function(err){
-  var urlRequest = this.urlRequest;
+  var urlRequest       = this.urlRequest;
   var beanstalkdClient = this.beanstalkdClient;
 
   if(urlRequest.getRetryCount() >= config.scraper.retry_count){
@@ -50,14 +51,17 @@ WebScraperController.prototype.onHandlerError = function(err){
 
 WebScraperController.prototype.up = function (){
     var self = this;
-    logger.debug("WebScraperController "+ self.pid+ "-"+self.id+" Up");
+
+    logger.debug("Controller "+ self.pid+ "-"+self.id+" is up");
+
     co(function *(){
         while(!self.isStopped){
 
             var startTime = Date.now();
 
             var urlRequest = yield self.beanstalkdClient.consumeURLRequest();
-            var services   = {
+
+            var services = {
               'beanstalkdClient': self.beanstalkdClient,
               'mongodbClient': self.mongodbClient
             };
@@ -75,7 +79,8 @@ WebScraperController.prototype.up = function (){
             .catch(self.onHandlerError.bind({urlRequest:urlRequest,beanstalkdClient:self.beanstalkdClient}));
 
             var duration = Date.now() - startTime;
-            logger.info("WebScraperController "+ self.pid+ "-"+self.id+" used "+duration+" to complete job");
+
+            logger.debug("Controller "+ self.pid+ "-"+self.id+" used "+duration+" to complete job");
         }
     })
     .catch(self.onSeriousError.bind(self));

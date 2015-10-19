@@ -18,13 +18,26 @@ BeanstalkdManager.prototype.close = function (){
     client.stop();
   })
   .catch(logger.error);
+
+  this.putClientPromise
+  .then(function(client){
+    client.stop();
+  })
+  .catch(logger.error);
 };
 
-BeanstalkdManager.prototype.putURLRequest = co.wrap(function* (urlRequest, priority, delay, ttr){
+BeanstalkdManager.prototype.lookUpTubeStat = function(){
+  return this.clientPromise
+  .then(function(client){
+    return client.stats_tubeAsync(config.beanstalkd.tube_name);
+  });
+};
+
+BeanstalkdManager.prototype.putURLRequest = co.wrap(function* (urlRequest, unimportantLevel, delayInSeconds, allowedTimeToRunInSeconds){
   if(urlRequest.constructor.name !== 'URLRequest'){
     throw new Error("urlRequest is not type of URLRequest");
   }
-  return yield this.__putJob(urlRequest,priority,delay,ttr);
+  return yield this.__putJob(urlRequest,unimportantLevel,delayInSeconds,allowedTimeToRunInSeconds);
 });
 
 BeanstalkdManager.prototype.__putJob = function (payload, priority, delay, ttr){
@@ -42,9 +55,31 @@ BeanstalkdManager.prototype.__putJob = function (payload, priority, delay, ttr){
   });
 };
 
+BeanstalkdManager.prototype.consumeURLRequestWithTimeout = function (){
+  return this.__consumeJob_with_timeout().then(URLRequest.createfromURLRequest);
+};
+
 BeanstalkdManager.prototype.consumeURLRequest = function (){
   return this.__consumeJob().then(URLRequest.createfromURLRequest);
 };
+
+//return undefined if timeout, also, err will be 'Error: TIMED_OUT'
+BeanstalkdManager.prototype.__consumeJob_with_timeout = co.wrap(function*(seconds){
+  var client = yield this.clientPromise;
+
+  var job = yield client.reserve_with_timeoutAsync(seconds);
+  logger.debug("Reserved job #" + job[0]);
+
+  var del_msg = yield client.destroyAsync(job[0]);
+  logger.debug("Delete job #" + job[0]);
+
+  var jobId  = job[0];
+  var payload = JSON.parse(job[1]);
+  logger.debug("Consumed job #" + jobId);
+  logger.debug(payload);
+
+  return payload;
+});
 
 BeanstalkdManager.prototype.__consumeJob = co.wrap(function*(){
   var client = yield this.clientPromise;
