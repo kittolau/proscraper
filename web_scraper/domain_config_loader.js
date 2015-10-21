@@ -75,6 +75,21 @@ DomainConfigLoader.prototype.checkDomainNameIdentifierDuplicate =  co.wrap(funct
   }
 });
 
+DomainConfigLoader.prototype.findDomainConfigDetail = co.wrap(function*(domainNameIdentifier){
+  var self = this;
+
+  var domainConfigArray = yield self.domainConfigArray;
+
+  for (var i = 0, len = domainConfigArray.length; i < len; i++) {
+    var domainConfig = domainConfigArray[i];
+    var domainConfigDetail = domainConfig.findDomainConfigDetail(domainNameIdentifier);
+    if( domainConfigDetail !== undefined){
+      return domainConfigDetail;
+    }
+  }
+  return undefined;
+});
+
 DomainConfigLoader.prototype.getControllerAllocationList = co.wrap(function*(){
   var self = this;
 

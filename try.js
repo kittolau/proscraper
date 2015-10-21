@@ -3,9 +3,7 @@
 global.rootRequire = function(name) {
     return require(__dirname + '/' + name);
 };
-var os                = require("os");
 var process           = require('process');
-var cluster           = require('cluster');
 var WebScraperProcess = rootRequire("web_scraper/web_scraper_process");
 var logger            = rootRequire('service/logger_manager');
 var config            = rootRequire('config');
@@ -14,8 +12,8 @@ var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
 
 var main = function(){
 
-  var SEED_URL = "http://www.getproxy.jp/en/";
-  var DOMAIN_ID = 'getproxy.jp';
+  var SEED_URL = "http://www.google.com/";
+  var DOMAIN_ID = 'google.com';
 
   var workerProcess = null;
 
@@ -35,7 +33,7 @@ var main = function(){
   workerProcess = new WebScraperProcess(
     process.pid,
     config.scraper.controller_count,
-    ['getproxy.jp','spys.ru','xroxy.com','gatherproxy.com']
+    [DOMAIN_ID]
   );
   workerProcess.applyProcessGlobalSetting();
   workerProcess
@@ -48,13 +46,14 @@ var main = function(){
     logger.error(err.stack);
   });
 
-  // var seedQueueClient = new BeanstalkdManager(config.beanstalkd, DOMAIN_ID);
-  // var urlRequest = new URLRequest(SEED_URL);
-  // seedQueueClient
-  // .putURLRequest(urlRequest)
-  // .then(function(){
-  //   seedQueueClient.close();
-  // });
+  var seedQueueClient = new BeanstalkdManager(config.beanstalkd, DOMAIN_ID);
+  var urlRequest = new URLRequest(SEED_URL);
+  seedQueueClient
+  .putURLRequest(urlRequest)
+  .then(function(){
+    seedQueueClient.close();
+  });
+
 
 };
 

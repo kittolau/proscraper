@@ -21,9 +21,11 @@ LoggerManager.prototype.__buildLogger = function(){
   var streams = [];
   if(config.logger.hasOwnProperty("file_log")){
 
+    var filename =  "pid_" + process.pid + "_"+ config.logger.file_log.filename;
+
     streams.push({
       level: config.logger.file_log.level,
-      path: path.join(config.root,'log',config.logger.file_log.filename)
+      path: path.join(config.root,'log',filename)
     });
   }
   if(config.logger.hasOwnProperty("stdout_log")){

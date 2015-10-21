@@ -11,8 +11,9 @@ var logger             = rootRequire('service/logger_manager');
 var BeanstalkdManager  = rootRequire("service/beanstalkd_manager");
 var MongoManager       = rootRequire('service/mongo_manager');
 var config             = rootRequire('config');
+var async              = require('async');
 
-function WebScraperController(pid, id,domainTubeName, domainConfigLoader) {
+function WebScraperController(pid, id, domainTubeName, domainConfigLoader) {
   this.pid                = pid;
   this.id                 = id;
   this.domainConfigLoader = domainConfigLoader;
@@ -21,6 +22,10 @@ function WebScraperController(pid, id,domainTubeName, domainConfigLoader) {
   this.beanstalkdClient   = new BeanstalkdManager(config.beanstalkd, domainTubeName);
   this.mongodbClient      = new MongoManager();
   this.domainTubeName     = domainTubeName;
+  this.services           = {
+    'beanstalkdClient': this.beanstalkdClient,
+    'mongodbClient': this.mongodbClient
+  };
 }
 
 WebScraperController.prototype.down = function (){
@@ -47,6 +52,67 @@ WebScraperController.prototype.onHandlerError = function(err){
   }
 };
 
+// WebScraperController.prototype.dispatch = function(urlRequest,finish){
+//   var self = this;
+//   var startTime = Date.now();
+//   Promise.all([
+//     self.scrapHandlerLoader.getHandlerClassFor(urlRequest.url),
+//     self.domainConfigLoader.findConfigFor(urlRequest.url)
+//   ])
+//   .spread(function(HandlerClass, domainConfig){
+//     if(HandlerClass === undefined){
+//       throw new Error("no HandlerClass");
+//     }
+
+//     var handler = new HandlerClass(urlRequest, self.services,domainConfig);
+
+//     return handler.handle()
+//     .catch(self.onHandlerError.bind({
+//       urlRequest:urlRequest,
+//       beanstalkdClient:self.beanstalkdClient
+//     }));
+//   })
+//   .then(function(){
+//     var duration = Date.now() - startTime;
+//     logger.debug("Controller "+ self.pid+ "-"+self.id+" used "+duration+"ms to complete job");
+//     finish();
+//   })
+//   .catch(self.onHandlerError.bind({
+//     urlRequest:urlRequest,
+//     beanstalkdClient:self.beanstalkdClient
+//   }));
+// };
+
+// WebScraperController.prototype.up_async_queue = function(){
+//   var self = this;
+
+//   logger.debug("Controller "+ self.pid+ "-"+self.id+" is up");
+
+//   var q = async.queue(self.dispatch.bind(self), self.asyncJobLimit);
+
+//   q.drain = function() {
+//     logger.debug("Controller "+ self.pid+ "-"+self.id+" processed all request");
+//   };
+
+//   co(function *(){
+//     while(!self.isStopped){
+//       var urlRequest = yield self.beanstalkdClient.consumeURLRequest();
+
+//       q.push(urlRequest,function(err){
+//         if(err){
+//           self.onHandlerError(err).bind({
+//             urlRequest:urlRequest,
+//             beanstalkdClient:self.beanstalkdClient
+//           });
+//           return;
+//         }
+//       });
+//     }
+//   })
+//   .catch(self.onSeriousError.bind(self));
+// }
+
+
 WebScraperController.prototype.up = function (){
     var self = this;
 
@@ -54,13 +120,12 @@ WebScraperController.prototype.up = function (){
 
     co(function *(){
         while(!self.isStopped){
-            var startTime = Date.now();
+
 
             var urlRequest = yield self.beanstalkdClient.consumeURLRequest();
-            var services   = {
-            'beanstalkdClient': self.beanstalkdClient,
-            'mongodbClient': self.mongodbClient
-            };
+            var services   = self.services;
+
+            var startTime = Date.now();
 
             var HandlerClass = yield self.scrapHandlerLoader.getHandlerClassFor(urlRequest.url);
             if(HandlerClass === undefined){
@@ -68,10 +133,10 @@ WebScraperController.prototype.up = function (){
             }
 
             var domainConfig = yield self.domainConfigLoader.findConfigFor(urlRequest.url);
-            var handler = new HandlerClass(services,domainConfig);
+            var handler = new HandlerClass(urlRequest, services,domainConfig);
 
             yield handler
-            .handle(urlRequest)
+            .handle()
             .catch(self.onHandlerError
             .bind({
               urlRequest:urlRequest,
@@ -81,7 +146,7 @@ WebScraperController.prototype.up = function (){
 
             var duration = Date.now() - startTime;
 
-            logger.debug("Controller "+ self.pid+ "-"+self.id+" used "+duration+"ms to complete job");
+            logger.info("Controller "+ self.pid+ "-"+self.id+" complete job: "+duration+" ms");
         }
     })
     .catch(self.onSeriousError.bind(self));

@@ -12,27 +12,28 @@ var config            = rootRequire('config');
 
 var main = function(){
 
-  var workerProcess = null;
+  var domainWhitList = ["getproxy.jp",'spys.ru','gatherproxy.com','xroxy.com'];
 
+  var workerProcess = null;
   process.on('SIGINT', function() {
       logger.warn("\nGracefully shutting down from SIGINT (Ctrl+C)");
       if(workerProcess !== null){
         workerProcess.down();
       }
-
-      console.timeEnd("pid "+ process.pid);
-
       process.exit(0);
   });
 
-  console.time("pid "+ process.pid);
+  var numWorkers = os.cpus().length;
 
   if(config.scraper.cluster_mode === 1){
     if(cluster.isMaster) {
-      var numWorkers = os.cpus().length;
+
+      var workerList = [];
+
       logger.info('Master cluster setting up ' + numWorkers + ' workers...');
       for(var i = 0; i < numWorkers; i++) {
-          cluster.fork();
+          var worker = cluster.fork({WorkerId: i});
+          workerList.push(worker);
       }
 
       cluster.on('online', function(worker) {
@@ -49,14 +50,49 @@ var main = function(){
           // cluster.fork();
       });
     } else {
-      workerProcess = new WebScraperProcess(process.pid, config.scraper.controller_count);
+
+      var workerId = process.env.WorkerId;
+      var numberOfDomainProcess =  Math.floor( domainWhitList.length / numWorkers );
+      var sliceStartingIndex = workerId  * numberOfDomainProcess;
+      var sliceEndIndex = sliceStartingIndex + numberOfDomainProcess;
+
+      var processDomain = domainWhitList.slice(sliceStartingIndex, sliceEndIndex);
+
+      workerProcess = new WebScraperProcess(
+        process.pid,
+        config.scraper.controller_count,
+        processDomain
+      );
       workerProcess.applyProcessGlobalSetting();
-      workerProcess.up();
+      workerProcess
+      .allocateController()
+      .then(function(){
+        workerProcess.up();
+      })
+      .catch(function(err){
+        logger.error(err);
+        logger.error(err.stack);
+      });
+
     }
   }else{
-    workerProcess = new WebScraperProcess(process.pid, config.scraper.controller_count);
+
+    workerProcess = new WebScraperProcess(
+      process.pid,
+      config.scraper.controller_count,
+      domainWhitList
+    );
     workerProcess.applyProcessGlobalSetting();
-    workerProcess.up();
+    workerProcess
+    .allocateController()
+    .then(function(){
+      workerProcess.up();
+    })
+    .catch(function(err){
+      logger.error(err);
+      logger.error(err.stack);
+    });
+
   }
 };
 

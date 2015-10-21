@@ -44,7 +44,42 @@ ScrapHandlerLoader.prototype.__bliudScrapHandlersPromise = co.wrap(function* (){
 
       var urlPattern           = HandlerClass.prototype.getHandleableURLPattern();
 
-      handlers.push({'urlPattern':urlPattern, 'handlerClass':HandlerClass});
+      if(urlPattern instanceof RegExp){
+        //if it is a regex object
+        handlers.push({'urlPattern':urlPattern, 'handlerClass':HandlerClass});
+
+      }else if(Array.isArray(urlPattern)){
+        for (var i = urlPattern.length - 1; i >= 0; i--) {
+          if(urlPattern[i].pattern === undefined){
+            throw new Error("getHandleableURLPattern() returns object does not contain 'pattern' property");
+          }
+
+          if(!urlPattern[i].pattern instanceof RegExp){
+            throw new Error("getHandleableURLPattern() returns object.pattern is not Regex");
+          }
+
+          if(urlPattern[i].scrapFunction === undefined){
+            throw new Error("getHandleableURLPattern() returns object does not contain 'scrapFunction' property");
+          }
+
+          if(typeof urlPattern[i].scrapFunction != 'string'){
+            throw new Error("getHandleableURLPattern() returns object.scrapFunction is not string");
+          }
+
+          if(/^$.+/g.test(urlPattern[i].scrapFunction)){
+            throw new Error("getHandleableURLPattern() returns object.scrapFunction is not mathcing pattern /$.+/g");
+          }
+
+          if(typeof HandlerClass.prototype[urlPattern[i].scrapFunction] != 'function'){
+            throw new Error(HandlerClass.constructor.name + " does not have function " + urlPattern[i].scrapFunction);
+          }
+
+          handlers.push({'urlPattern':urlPattern[i].pattern, 'handlerClass':HandlerClass});
+        }
+      }else{
+        throw new Error("expected getHandleableURLPattern() return Regex or {pattern,scrapFunction}, but given " + urlPattern);
+      }
+
       logger.debug("Handler loaded: " + scrapHandlerPath);
     });
   });

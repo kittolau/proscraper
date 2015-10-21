@@ -58,7 +58,31 @@ BeanstalkdManager.prototype.putURLRequest = co.wrap(function* (urlRequest, unimp
     throw new Error("urlRequest is not type of URLRequest");
   }
   return yield this.__putJob(
-    URLRequest.prototype.createNewURLRequestfromURLRequest(urlRequest),
+    URLRequest.prototype.__createNew(urlRequest),
+    unimportantLevel,
+    delayInSeconds,
+    allowedTimeToRunInSeconds
+  );
+});
+
+BeanstalkdManager.prototype.putResetDepthURLRequest = co.wrap(function* (urlRequest, unimportantLevel, delayInSeconds, allowedTimeToRunInSeconds){
+  if(urlRequest.constructor.name !== 'URLRequest'){
+    throw new Error("urlRequest is not type of URLRequest");
+  }
+  return yield this.__putJob(
+    URLRequest.prototype.__createResetDepth(urlRequest),
+    unimportantLevel,
+    delayInSeconds,
+    allowedTimeToRunInSeconds
+  );
+});
+
+BeanstalkdManager.prototype.putDepthURLRequest = co.wrap(function* (urlRequest, unimportantLevel, delayInSeconds, allowedTimeToRunInSeconds){
+  if(urlRequest.constructor.name !== 'URLRequest'){
+    throw new Error("urlRequest is not type of URLRequest");
+  }
+  return yield this.__putJob(
+    URLRequest.prototype.__createDeep(urlRequest),
     unimportantLevel,
     delayInSeconds,
     allowedTimeToRunInSeconds
@@ -71,7 +95,7 @@ BeanstalkdManager.prototype.putFailedURLRequest = co.wrap(function* (urlRequest,
   }
 
   return yield this.__putJob(
-    URLRequest.prototype.createNewURLRequestfromURLRequest(urlRequest),
+    URLRequest.prototype.__createNewFailed(urlRequest),
     unimportantLevel,
     delayInSeconds,
     allowedTimeToRunInSeconds
@@ -94,11 +118,11 @@ BeanstalkdManager.prototype.__putJob = function (payload, priority, delay, ttr){
 };
 
 BeanstalkdManager.prototype.consumeURLRequestWithTimeout = function (seconds){
-  return this.__consumeJob_with_timeout(seconds).then(URLRequest.prototype.createNewURLRequestfromURLRequest);
+  return this.__consumeJob_with_timeout(seconds).then(URLRequest.prototype.__createNew);
 };
 
 BeanstalkdManager.prototype.consumeURLRequest = function (){
-  return this.__consumeJob().then(URLRequest.prototype.createNewURLRequestfromURLRequest);
+  return this.__consumeJob().then(URLRequest.prototype.__createNew);
 };
 
 //return undefined if timeout, also, err will be 'Error: TIMED_OUT'

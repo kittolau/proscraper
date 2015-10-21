@@ -14,7 +14,7 @@ var logger             = rootRequire('service/logger_manager');
 var BeanstalkdManager  = rootRequire("service/beanstalkd_manager");
 var MongoManager       = rootRequire('service/mongo_manager');
 var config             = rootRequire('config');
-var async              = require('async')
+var async              = require('async');
 
 function onSeriousError(err) {
   logger.error(err);
@@ -54,9 +54,10 @@ function up_while_timeout(timeout){
 
           try{
             //this is non blocking call
-            // var urlRequest = yield beanstalkdClient.consumeURLRequestWithTimeout(timeout);
+            var urlRequest = yield beanstalkdClient.consumeURLRequestWithTimeout(timeout);
 
           }catch(err){
+            console.log(err == 'Error: TIMED_OUT')
             var duration = Date.now() - startTime;
             console.log(Date.now() - promgram_startime+ "up_while_timeout used "+duration+"ms to complete job");
           }
@@ -88,15 +89,116 @@ function up_setinterval_timeout(){
     },1000);
 }
 
-up_while_blocking();
-up_while_blocking();
-up_while_timeout(1);
-up_while_timeout(10);
-up_while_timeout(1);
-up_while_timeout(1);
-up_while_timeout(1);
-up_while_timeout(1);
-up_while_timeout(1);
-up_while_timeout(1);
-up_while_timeout(1);
+var totalRequestTime = 0;
+var promgram_startime= Date.now();
+
+function random (low, high) {
+    return Math.random() * (high - low) + low;
+}
+
+function makeRequest(url, callback) {
+  /* make a http request */
+  var finishTime = random(300,1000);
+  totalRequestTime += finishTime;
+  setTimeout(function(){
+    console.log(Date.now() - promgram_startime +": done job " + url + " in " + finishTime);
+    callback();
+  },finishTime);
+}
+
+var q = async.queue(makeRequest, 100);
+
+q.drain = function() {
+  var promgram_duration = (Date.now() - promgram_startime) / 1000;
+  console.log("totalRequestTime: "+totalRequestTime);
+  console.log("avg RequestTime: "+ totalRequestTime / numberOfRequest);
+  console.log("avg job done per seconds: "+ numberOfRequest / promgram_duration);
+};
+
+var numberOfRequest = 1000;
+
+var urls = [];
+for (var i = numberOfRequest - 1; i >= 0; i--) {
+  urls.push(i);
+}
+
+var extraJobTime =
+setInterval(function(){
+  q.push('extra job');
+
+},100);
+
+q.push(urls);
+// Promise.all([
+//   new Promise.resolve("1"),
+//   new Promise.resolve("2"),
+// ])
+// .spread(function(a,b){
+//   console.log(a)
+//   console.log(b)
+// })
+
+// async.forever(
+//     function(next) {
+//         // next is suitable for passing to things that need a callback(err [, whatever]);
+//         // it will result in this function being called again.
+//         console.log(next);
+//         next('a');
+//     },
+//     function(err) {
+//         // if next is called with a value in its first parameter, it will appear
+//         // in here as 'err', and execution will stop.
+//         console.log(err)
+//     }
+// );
+
+// function a(){
+//   process.nextTick(a)
+// }
+// a()
+
+// var q = async.queue(function (task, callback) {
+//     console.log('hello ' + task.name);
+//     callback();
+// }, 100);
+
+// q.drain = function() {
+//     console.log('all items have been processed');
+// }
+
+// q.push({name: 'foo'}, function (err) {
+//     console.log('finished processing foo');
+// });
+// q.push({name: 'bar'}, function (err) {
+//     console.log('finished processing bar');
+// });
+
+// q.push([{name: 'baz'},{name: 'bay'},{name: 'bax'}], function (err) {
+//     console.log('finished processing item');
+// });
+
+// add some items to the front of the queue
+// q.unshift({name: 'bar'}, function (err) {
+//     console.log('finished processing bar');
+// });
+
+// var BloomFilter = require('bloomfilter').BloomFilter;
+// var array = [];
+// for (var i = 1000000 - 1; i >= 0; i--) {
+
+//   array.push(new BloomFilter(8192, 16));
+// };
+// var sleep = require('sleep')
+// sleep(100);
+
+// up_while_blocking();
+// up_while_blocking();
+// up_while_timeout(1);
+// up_while_timeout(10);
+// up_while_timeout(1);
+// up_while_timeout(1);
+// up_while_timeout(1);
+// up_while_timeout(1);
+// up_while_timeout(1);
+// up_while_timeout(1);
 //up_setinterval_timeout();

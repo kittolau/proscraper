@@ -1,16 +1,21 @@
-function DomainConfigDetail(domainNameIdentifier, requiredControllerCountPerProcess,agentSet,requestConfig, handleableDomainNamePatterns) {
+var config = rootRequire('config');
+
+function DomainConfigDetail(domainNameIdentifier, requiredControllerCountInProcess,maximunDepthLevel,agentSet,requestConfig, handleableDomainNamePatterns) {
   var isValidDomainName = /^.+\..+/g.test(domainNameIdentifier);
   if(!isValidDomainName){
     throw new Error("domainNameIdentifier expects x.x string pattern, but given " + domainNameIdentifier);
   }
-  if(!requiredControllerCountPerProcess > 0){
-    throw new Error("requiredControllerCountPerProcess expects > 1, but given " + requiredControllerCountPerProcess);
+  if((!requiredControllerCountInProcess > 0) && requiredControllerCountInProcess !== null){
+    throw new Error("requiredControllerCountInProcess expects > 1 or null, but given " + requiredControllerCountInProcess);
+  }
+  if((!maximunDepthLevel > 0) && maximunDepthLevel !== null){
+    throw new Error("maximunDepthLevel expects > 1 or null, but given " + maximunDepthLevel);
   }
   if(typeof agentSet != 'object' && agentSet !== null){
-    throw new Error("agentSet expects object, but given " + agentSet);
+    throw new Error("agentSet expects object or null, but given " + agentSet);
   }
   if(typeof requestConfig != 'object' && requestConfig !== null){
-    throw new Error("requestConfig expects object, but given " + requestConfig);
+    throw new Error("requestConfig expects object or null, but given " + requestConfig);
   }
   var isValidArrayOfRegex =  Array.isArray(handleableDomainNamePatterns) && handleableDomainNamePatterns.every(function(elm){ return elm instanceof RegExp;} );
   if(!isValidArrayOfRegex){
@@ -20,8 +25,11 @@ function DomainConfigDetail(domainNameIdentifier, requiredControllerCountPerProc
     throw new Error("handleableDomainNamePatterns expects at least one pattern");
   }
 
+  requiredControllerCountInProcess = requiredControllerCountInProcess || 1;
+
   Object.defineProperty(this,'domainNameIdentifier',{value:domainNameIdentifier,enumerable:true});
-  Object.defineProperty(this,'requiredControllerCount',{value:requiredControllerCountPerProcess,enumerable:true});
+  Object.defineProperty(this,'requiredControllerCount',{value:requiredControllerCountInProcess,enumerable:true});
+  Object.defineProperty(this,'maximunDepthLevel',{value:maximunDepthLevel,enumerable:true});
   Object.defineProperty(this,'agentSet',{value:agentSet,enumerable:true});
   Object.defineProperty(this,'requestConfig',{value:requestConfig,enumerable:true,configurable:true});
   Object.defineProperty(this,'handleableDomainNamePatterns',{value:handleableDomainNamePatterns,enumerable:true});

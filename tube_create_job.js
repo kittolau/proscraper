@@ -11,23 +11,11 @@ var config            = rootRequire('config');
 
 var main = function(){
 
-    var aClient = new BeanstalkdManager(config.beanstalkd,'getproxy.jp');
-    var bClient = new BeanstalkdManager(config.beanstalkd,'spys.ru');
-    var cClient = new BeanstalkdManager(config.beanstalkd,'xroxy.com');
-    var dClient = new BeanstalkdManager(config.beanstalkd,'gatherproxy.com');
-    var aRequest = new URLRequest("http://www.getproxy.jp/en/");
-    var bRequest = new URLRequest("http://spys.ru/");
-    var cRequest = new URLRequest("http://www.xroxy.com/");
-    var dRequest = new URLRequest("http://www.gatherproxy.com/");
-    // for (var i = 0; i < 1000; i++) {
-    //   aClient.putURLRequest(aRequest);
-
-    //   bClient.putURLRequest(bRequest);
-
-    //   cClient.putURLRequest(cRequest);
-
-    //   dClient.putURLRequest(dRequest);
-    // }
+    var aClient = new BeanstalkdManager(config.beanstalkd,'yourTubename.jp');
+    var aRequest = new URLRequest("http://www.google.com/en/");
+    for (var i = 0; i < 1000; i++) {
+      aClient.putURLRequest(aRequest);
+    }
 };
 
 if (require.main === module) {

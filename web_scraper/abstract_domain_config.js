@@ -107,6 +107,16 @@ AbstractDomainConfig.prototype.getControllerAllocationList = function(){
   return res;
 };
 
+AbstractDomainConfig.prototype.findDomainConfigDetail = function(domainNameIdentifier){
+  for (var i = this.domainDetailArray.length - 1; i >= 0; i--) {
+    var domainDetail = this.domainDetailArray[i];
+    if(domainDetail.domainNameIdentifier == domainNameIdentifier){
+      return domainDetail;
+    }
+  }
+  return undefined;
+};
+
 // AbstractDomainConfig.prototype.getHandleableDomainNamePatternArray = function(){
 //     var allPattern = [];
 //     for (var i = this.domainDetailArray.length - 1; i >= 0; i--) {
@@ -117,14 +127,23 @@ AbstractDomainConfig.prototype.getControllerAllocationList = function(){
 //     return merged;
 // };
 
-AbstractDomainConfig.prototype.getRequestConfig = co.wrap(function* (url){
-    for (var i = this.domainDetailArray.length - 1; i >= 0; i--) {
-      var domainDetail = this.domainDetailArray[i];
-      if(domainDetail.canHandleURL(url)){
-        return domainDetail.getRequestConfig(url);
-      }
+AbstractDomainConfig.prototype.getDomainConfigDetail = function(url){
+  for (var i = this.domainDetailArray.length - 1; i >= 0; i--) {
+    var domainDetail = this.domainDetailArray[i];
+    if(domainDetail.canHandleURL(url)){
+      return domainDetail;
     }
-    return undefined;
+  }
+  return undefined;
+};
+
+AbstractDomainConfig.prototype.getRequestConfig = co.wrap(function* (url){
+
+    var domainDetail = this.getDomainConfigDetail(url);
+    if(domainDetail === undefined){
+      return undefined;
+    }
+    return domainDetail.getRequestConfig(url);
 });
 
 module.exports = AbstractDomainConfig;

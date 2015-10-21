@@ -4,31 +4,32 @@ var inherits             = require('util').inherits;
 var AbstractDomainConfig = rootRequire('web_scraper/abstract_domain_config');
 var DomainConfigDetail = rootRequire('web_scraper/domain_config_detail');
 
-var co = require('co');
-
-function ExampleDomainConfig() {
+function DomainConfig() {
   AbstractDomainConfig.call(this);
   var self = this;
-
   var domainConfigDetailList = [];
+  var aProxyConfigDetail = null;
 
-  var getProxyConfigDetail = new DomainConfigDetail(
-    'getproxy.jp', //domainNameIdentifier
-    1, //requiredControllerCount
+
+  //copy and edit
+  aProxyConfigDetail = new DomainConfigDetail(
+    'whatever-you-want-to-crawl.com', //domainNameIdentifier
+    20, //requiredControllerCount
+    null, //maximunDepthLevel
     self.createAgentSet("HTTP_AGENT"), //agentSet
     { //requestConfig
       followRedirect : true,
       timeout : 15000
     },
     [ //handleableDomainNamePatterns
-      /getproxy\.jp/g
+      /whatever-you-want-to-crawl\.com/g
     ]
   );
-  domainConfigDetailList.push(getProxyConfigDetail);
+  domainConfigDetailList.push(aProxyConfigDetail);
 
 
   self.setDomainDetialArray(domainConfigDetailList);
 }
-inherits(ExampleDomainConfig, AbstractDomainConfig);
+inherits(DomainConfig, AbstractDomainConfig);
 
-module.exports = ExampleDomainConfig;
+module.exports = DomainConfig;

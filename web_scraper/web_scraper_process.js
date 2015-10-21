@@ -114,6 +114,8 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
       continue;
     }
 
+    var domainConfigDetail = yield self.domainConfigLoader.findDomainConfigDetail(domainId);
+
     allocatedList.push(requiredAllocation);
     totalAllocatedCount += numberOfRequiredController;
 
@@ -122,7 +124,12 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
     }
 
     for (var j = numberOfRequiredController - 1; j >= 0; j--) {
-      var controller = new WebScraperController(self.pid, j, domainId, self.domainConfigLoader);
+      var controller = new WebScraperController(
+        self.pid,
+        j,
+        domainId,
+        self.domainConfigLoader
+      );
       var controllerStatus = {
         domainId : domainId,
         controller:controller,
@@ -131,11 +138,15 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
       self.controllerStatusList.push(controllerStatus);
     }
   }
-
   self.allocatedList = allocatedList;
   logger.debug("Web Scraper Process allocation:\n " + self.__getAllocationReportString(allocatedList));
-
 });
+
+WebScraperProcess.prototype.onSeriousError = function(err){
+  logger.error(err);
+  logger.error(err.stack);
+  process.exit(1);
+};
 
 WebScraperProcess.prototype.__getAllocationReportString = function(allocatedList){
   return allocatedList.reduce(function (a, b) {
@@ -158,15 +169,6 @@ WebScraperProcess.prototype.up = function(){
 };
 
 WebScraperProcess.prototype.down = function(){
-
-  // if( this.jobProbingIntervalId !== null){
-  //   clearInterval( this.jobProbingIntervalId );
-  // }
-
-  // if( this.pendingJobsProbingClient !== null){
-  //   this.pendingJobsProbingClient.close();
-  // }
-
   for (var i = this.controllerStatusList.length - 1; i >= 0; i--) {
       var controllerStatus = this.controllerStatusList[i];
       controllerStatus.controller.down();

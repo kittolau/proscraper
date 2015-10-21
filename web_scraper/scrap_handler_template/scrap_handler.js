@@ -1,42 +1,63 @@
 /* jshint node: true, esnext:true */
 'use strict';
 var Promise              = require('bluebird');
-var cheerio              = require('cheerio');
 var co                   = require('co');
 var inherits             = require('util').inherits;
 var AbstractScrapHandler = rootRequire('web_scraper/abstract_scrap_handler');
 var logger               = rootRequire('service/logger_manager');
+var url                  = require('url');
 
-//var constructor = function <contructor name>()
-function ExampleHandler(services,domainConfig) {
-  AbstractScrapHandler.call(this,services,domainConfig);
+function ScrapHandler(urlRequest, services, domainConfig) {
+  AbstractScrapHandler.call(this,urlRequest, services, domainConfig);
 }
-inherits(ExampleHandler, AbstractScrapHandler);
+inherits(ScrapHandler, AbstractScrapHandler);
 
-ExampleHandler.prototype.getHandleableURLPattern = function (){
-  return /what-ever-site-you-want\.com\/hk\/(?:posts\/\d+|$)/g;
+
+// ScrapHandler.prototype.getHandleableURLPattern = function (){
+//   return [
+//     {
+//       'pattern': /whatever-you-want\.com\/posts\//g,
+//       'scrapFunction': '$scrapPosts',
+//     },
+//     {
+//       'pattern': /whatever-you-want\.com\/users\//g,
+//       'scrapFunction': '$scrapUsers',
+//     },
+//   ];
+// };
+
+// ScrapHandler.prototype.$scrapUsers = co.wrap(function*(pageSource){
+//   var self = this;
+//   var blockingPromises = [];
+//   var $ = yield self.getCheerioPromise(pageSource);
+// });
+
+// ScrapHandler.prototype.$scrapPosts = co.wrap(function*(pageSource){
+//   var self = this;
+//   var blockingPromises = [];
+//   var $ = yield self.getCheerioPromise(pageSource);
+// });
+
+
+ScrapHandler.prototype.getHandleableURLPattern = function (){
+  return /whatever-you-want\.com\/en\/(?:default\/\d+|$)/g;
 };
 
 //test the code in chrome first
-ExampleHandler.prototype.scrap = co.wrap(function*(pageSource){
+ScrapHandler.prototype.scrap = co.wrap(function*(pageSource){
   var self = this;
-  var promises = [];
-
-  // helper to get either cheerio, which has a fast loading speed (3xms)
+  var blockingPromises = [];
   var $ = yield self.getCheerioPromise(pageSource);
-  // helper to get either jquery via jsdom, which has a slow loading speed (3xxms)
-  var $ = yield self.getJqueryPromise(pageSource);
 
-  // get all the links in the page
-  var allDomainLink = self.getAllLinksContains($, "getproxy.jp");
+  //get all the links
+  var allDomainLink = self.getAllLinksContains($, "whatever-you-want.com");
 
-  // try to crawl
   var nextPageUrl = $('a[title="next page"]').attr("href");
   self.tryCrawl(nextPageUrl).catch(self.onNonYieldedError);
 
   var trs = $('tr.white, tr.gray');
-  trs.each(function(i, tr){
-    var tds = $( tr ).children();
+  for (var i = trs.length - 1; i >= 0; i--) {
+    var tds = $( trs[i] ).children();
 
     var rawhostname = $(tds[0]).text();
     var rawcountry = $(tds[1]).text();
@@ -71,9 +92,9 @@ ExampleHandler.prototype.scrap = co.wrap(function*(pageSource){
     self.mongodbClient
      .getPromisifiedCollection('web_proxys')
      .updateAsync({ip:ip}, data, {upsert:true}).catch(self.onNonYieldedError);
-  });
+  }
 
-  yield promises;
+  yield blockingPromises;
 });
 
-module.exports = ExampleHandler;
+module.exports = ScrapHandler;

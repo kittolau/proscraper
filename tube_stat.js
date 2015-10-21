@@ -17,10 +17,7 @@ var main = function(){
   }
 
   var allTube = [];
-  allTube.push(new BeanstalkdManager(config.beanstalkd,'getproxy.jp'));
-  allTube.push(new BeanstalkdManager(config.beanstalkd,'spys.ru'));
-  allTube.push(new BeanstalkdManager(config.beanstalkd,'xroxy.com'));
-  allTube.push(new BeanstalkdManager(config.beanstalkd,'gatherproxy.com'));
+  allTube.push(new BeanstalkdManager(config.beanstalkd,'yourTubename.jp'));
 
   var startTime = Date.now();
 
@@ -28,7 +25,7 @@ var main = function(){
     Promise
     .all(allTube)
     .map(function(c){
-      return c.lookUpTubeStat()
+      return c.lookUpTubeStat();
     })
     .then(function(s){
       clearConsole();

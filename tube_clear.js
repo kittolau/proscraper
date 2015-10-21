@@ -11,7 +11,7 @@ var config            = rootRequire('config');
 
 var main = function(){
 
-    var DOMAIN_ID = 'getproxy.jp';
+    var DOMAIN_ID = 'yourTubename.com';
 
     var seedQueueClient = new BeanstalkdManager(config.beanstalkd,DOMAIN_ID);
     co(function *(){

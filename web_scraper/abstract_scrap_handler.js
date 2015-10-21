@@ -15,14 +15,29 @@ var URLRequest  = rootRequire('web_scraper/url_request');
 var logger      = rootRequire('service/logger_manager');
 
 
-function AbstractScrapHandler(services, domainConfig) {
+function AbstractScrapHandler(urlRequest, services, domainConfig) {
   this.beanstalkdClient  = services.beanstalkdClient;
   this.mongodbClient     = services.mongodbClient;
 
   this.domainConfig       = domainConfig;
-  this.currentUrlRequest  = null;
-  this._seenURL = null;
-  this.$                  = null;
+
+  this.currentUrlRequest = urlRequest;
+
+  //prepate for this._seenURL
+  if(urlRequest.isPayloadExist("_seenURLBuckets")){
+    this._seenURL = new BloomFilter(urlRequest.getPayload("_seenURLBuckets"), 3);
+  }else{
+    this._seenURL = new BloomFilter(8192, 16);
+  }
+
+  this._seenURL.add(urlRequest.url);
+  //store bloomfilter's buckets as the payload
+  var _seenURLBuckets = [].slice.call(this._seenURL.buckets);
+  this.currentUrlRequest.setPayload('_seenURLBuckets', _seenURLBuckets);
+
+  this.domainConfigDetail = this.domainConfig.getDomainConfigDetail(urlRequest.url);
+
+  this.handleableURLPattern = this.getHandleableURLPattern();
 }
 
 AbstractScrapHandler.prototype.getHandleableURLPattern = function (){
@@ -37,31 +52,32 @@ AbstractScrapHandler.prototype.getOverriddenRequestConfigBeforeRequest = functio
   return null;
 };
 
-
 //if you like you can override it
-AbstractScrapHandler.prototype.handle = co.wrap(function* (urlRequest){
+AbstractScrapHandler.prototype.handle = co.wrap(function* (){
   var self = this;
 
-  //prepate for this.currentUrlRequest
-  this.currentUrlRequest = urlRequest;
-
-  //prepate for this._seenURL
-  if(urlRequest.isPayloadExist("_seenURLBuckets")){
-    this._seenURL = new BloomFilter(urlRequest.getPayload("_seenURLBuckets"), 3);
-  }else{
-    this._seenURL = new BloomFilter(8192, 16);
-  }
-
-
-  this._seenURL.add(urlRequest.url);
-  //store bloomfilter's buckets as the payload
-  var _seenURLBuckets = [].slice.call(this._seenURL.buckets);
-  this.currentUrlRequest.setPayload('_seenURLBuckets', _seenURLBuckets);
-
   var overriddenRequestConfig = self.getOverriddenRequestConfigBeforeRequest();
-  var pageSource              = yield this.requestPageSource(urlRequest.url,null,overriddenRequestConfig);
 
-  return yield self.scrap(pageSource);
+  var startTime = Date.now();
+
+  var pageSource              = yield this.requestPageSource(self.currentUrlRequest.url,null,overriddenRequestConfig);
+
+  var duration = Date.now() - startTime;
+
+  logger.debug("request Time: " + duration + "ms");
+
+  if(this.handleableURLPattern instanceof RegExp){
+    return yield self.scrap(pageSource);
+  }else{
+    for (var i = self.handleableURLPattern.length - 1; i >= 0; i--) {
+      var patternMap = self.handleableURLPattern[i];
+      if(patternMap.pattern.test(self.currentUrlRequest.url)){
+        var scrapFunctionName = patternMap.scrapFunction;
+
+        return yield self[scrapFunctionName](pageSource);
+      }
+    }
+  }
 });
 
 AbstractScrapHandler.prototype.requestPageSource = co.wrap(function*(url, method, overriddenRequestConfig){
@@ -196,6 +212,36 @@ AbstractScrapHandler.prototype.getAllLinksContains = function($, string){
   return res;
 };
 
+AbstractScrapHandler.prototype.tryCrawlWithDepthReset = co.wrap(function*(href,payload,checkBloomFilter){
+  checkBloomFilter = checkBloomFilter || true;
+
+  var absolutePath = this.hrefToCrawlableAbsoluteURL(href);
+  if(!absolutePath){
+    logger.debug(href + " is not an crawlable absolute url");
+    return;
+  }
+
+  yield this.__putNewResetDepthURLRequest(absolutePath,payload,checkBloomFilter);
+});
+
+AbstractScrapHandler.prototype.tryCrawlWithDepth = co.wrap(function*(href,payload,checkBloomFilter){
+  checkBloomFilter = checkBloomFilter || true;
+
+  var absolutePath = this.hrefToCrawlableAbsoluteURL(href);
+  if(!absolutePath){
+    logger.debug(href + " is not an crawlable absolute url");
+    return;
+  }
+
+  if(this.domainConfigDetail.maximunDepthLevel !== null){
+    if(this.currentUrlRequest.depthLevel >= this.domainConfigDetail.maximunDepthLevel ){
+     logger.warn("maximun depth reached");
+     return;
+    }
+  }
+
+  yield this.__putNewDepthURLRequest(absolutePath,payload,checkBloomFilter);
+});
 
 AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBloomFilter){
   checkBloomFilter = checkBloomFilter || true;
@@ -205,6 +251,17 @@ AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBl
     logger.debug(href + " is not an crawlable absolute url");
     return;
   }
+
+  console.log(this.currentUrlRequest.depthLevel);
+  console.log(this.domainConfigDetail.maximunDepthLevel);
+
+  if(this.domainConfigDetail.maximunDepthLevel !== null){
+    if(this.currentUrlRequest.depthLevel >= this.domainConfigDetail.maximunDepthLevel ){
+     logger.warn("maximun depth reached");
+     return;
+    }
+  }
+
 
   yield this.__putNewURLRequest(absolutePath,payload,checkBloomFilter);
 });
@@ -221,16 +278,30 @@ AbstractScrapHandler.prototype.crawl = co.wrap(function*(href,payload,checkBloom
   yield this.__putNewURLRequest(absolutePath,payload,checkBloomFilter);
 });
 
+AbstractScrapHandler.prototype.__putNewResetDepthURLRequest = co.wrap(function*(absolutePath,payload,checkBloomFilter){
+  if(checkBloomFilter && this._seenURL.test(absolutePath)){
+    logger.warn(absolutePath + " may has been visited before");
+    return;
+  }
+  var urlRequest = URLRequest.prototype.__createNewCrawl(absolutePath,payload,this.currentUrlRequest);
+  yield this.beanstalkdClient.putResetDepthURLRequest(urlRequest);
+});
+
+AbstractScrapHandler.prototype.__putNewDepthURLRequest = co.wrap(function*(absolutePath,payload,checkBloomFilter){
+  if(checkBloomFilter && this._seenURL.test(absolutePath)){
+    logger.warn(absolutePath + " may has been visited before");
+    return;
+  }
+  var urlRequest = URLRequest.prototype.__createNewCrawl(absolutePath,payload,this.currentUrlRequest);
+  yield this.beanstalkdClient.putDepthURLRequest(urlRequest);
+});
+
 AbstractScrapHandler.prototype.__putNewURLRequest = co.wrap(function*(absolutePath,payload,checkBloomFilter){
   if(checkBloomFilter && this._seenURL.test(absolutePath)){
     logger.warn(absolutePath + " may has been visited before");
     return;
   }
-
-  var newPayload = this.currentUrlRequest.clonePayload();
-  this.extendJSON(newPayload,payload);
-
-  var urlRequest = new URLRequest(absolutePath,newPayload);
+  var urlRequest = URLRequest.prototype.__createNewCrawl(absolutePath,payload,this.currentUrlRequest);
   yield this.beanstalkdClient.putURLRequest(urlRequest);
 });
 
