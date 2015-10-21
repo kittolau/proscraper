@@ -7,19 +7,37 @@ var logger = rootRequire('service/logger_manager');
 var config = rootRequire('config');
 var URLRequest        = rootRequire('web_scraper/url_request');
 
-var BeanstalkdManager = function () {
-  this.clientPromise    = this.__buildClientPromise();
-  this.putClientPromise = this.__buildClientPromise();
+var BeanstalkdManager = function (connectionConfig, domainTubeName) {
+
+  var host = connectionConfig.host;
+  var port = connectionConfig.port;
+  if(typeof connectionConfig != "object"){
+    throw new Error("connectionConfig is expeced as object, but given: "+connectionConfig);
+  }
+  if(!connectionConfig.host || !connectionConfig.port){
+    throw new Error("host & port is expected in !connectionConfig, given host: " + host + ", port: " + port);
+  }
+
+  if(domainTubeName && typeof domainTubeName != 'string'){
+    throw new Error("domainTubeName is expected string, but given " + domainTubeName);
+  }
+  this.host           = host;
+  this.port           = port;
+  this.watchTubeArray = [domainTubeName];
+  this.useDomainTube  = [domainTubeName];
+  this.watchClientPromise = this.__buildWatchClientPromise(host, port, this.watchTubeArray);
+  this.useClientPromise   = this.__buildUseClientPromise(host, port, this.useDomainTube);
+
 };
 
 BeanstalkdManager.prototype.close = function (){
-  this.clientPromise
+  this.watchClientPromise
   .then(function(client){
     client.stop();
   })
   .catch(logger.error);
 
-  this.putClientPromise
+  this.useClientPromise
   .then(function(client){
     client.stop();
   })
@@ -27,9 +45,11 @@ BeanstalkdManager.prototype.close = function (){
 };
 
 BeanstalkdManager.prototype.lookUpTubeStat = function(){
-  return this.clientPromise
+  var self = this;
+
+  return this.useClientPromise
   .then(function(client){
-    return client.stats_tubeAsync(config.beanstalkd.tube_name);
+    return client.stats_tubeAsync(self.useDomainTube[0]);
   });
 };
 
@@ -37,7 +57,25 @@ BeanstalkdManager.prototype.putURLRequest = co.wrap(function* (urlRequest, unimp
   if(urlRequest.constructor.name !== 'URLRequest'){
     throw new Error("urlRequest is not type of URLRequest");
   }
-  return yield this.__putJob(urlRequest,unimportantLevel,delayInSeconds,allowedTimeToRunInSeconds);
+  return yield this.__putJob(
+    URLRequest.prototype.createNewURLRequestfromURLRequest(urlRequest),
+    unimportantLevel,
+    delayInSeconds,
+    allowedTimeToRunInSeconds
+  );
+});
+
+BeanstalkdManager.prototype.putFailedURLRequest = co.wrap(function* (urlRequest, unimportantLevel, delayInSeconds, allowedTimeToRunInSeconds){
+  if(urlRequest.constructor.name !== 'URLRequest'){
+    throw new Error("urlRequest is not type of URLRequest");
+  }
+
+  return yield this.__putJob(
+    URLRequest.prototype.createNewURLRequestfromURLRequest(urlRequest),
+    unimportantLevel,
+    delayInSeconds,
+    allowedTimeToRunInSeconds
+  );
 });
 
 BeanstalkdManager.prototype.__putJob = function (payload, priority, delay, ttr){
@@ -46,7 +84,7 @@ BeanstalkdManager.prototype.__putJob = function (payload, priority, delay, ttr){
   if (typeof(ttr)      ==='undefined' || ttr === null) ttr = 1000;
 
   return this
-  .putClientPromise
+  .useClientPromise
   .then(function(client){
     return client.putAsync(priority, delay, ttr, JSON.stringify(payload));
   })
@@ -55,17 +93,17 @@ BeanstalkdManager.prototype.__putJob = function (payload, priority, delay, ttr){
   });
 };
 
-BeanstalkdManager.prototype.consumeURLRequestWithTimeout = function (){
-  return this.__consumeJob_with_timeout().then(URLRequest.createfromURLRequest);
+BeanstalkdManager.prototype.consumeURLRequestWithTimeout = function (seconds){
+  return this.__consumeJob_with_timeout(seconds).then(URLRequest.prototype.createNewURLRequestfromURLRequest);
 };
 
 BeanstalkdManager.prototype.consumeURLRequest = function (){
-  return this.__consumeJob().then(URLRequest.createfromURLRequest);
+  return this.__consumeJob().then(URLRequest.prototype.createNewURLRequestfromURLRequest);
 };
 
 //return undefined if timeout, also, err will be 'Error: TIMED_OUT'
 BeanstalkdManager.prototype.__consumeJob_with_timeout = co.wrap(function*(seconds){
-  var client = yield this.clientPromise;
+  var client = yield this.watchClientPromise;
 
   var job = yield client.reserve_with_timeoutAsync(seconds);
   logger.debug("Reserved job #" + job[0]);
@@ -82,7 +120,7 @@ BeanstalkdManager.prototype.__consumeJob_with_timeout = co.wrap(function*(second
 });
 
 BeanstalkdManager.prototype.__consumeJob = co.wrap(function*(){
-  var client = yield this.clientPromise;
+  var client = yield this.watchClientPromise;
 
   var job = yield client.reserveAsync();
   logger.debug("Reserved job #" + job[0]);
@@ -99,27 +137,24 @@ BeanstalkdManager.prototype.__consumeJob = co.wrap(function*(){
 });
 
 BeanstalkdManager.prototype.__useTube = function(client, tubeName){
-  return client.useAsync(tubeName) // the tubes which .put() puts to
+  return client
+  .useAsync(tubeName) // the tubes which .put() puts to
   .then(function(retTubeName) {
     logger.debug("Using tube: '" + tubeName + "'");
   });
-
 };
 
 BeanstalkdManager.prototype.__watchTube = function(client, tubeName){
-  return client.watchAsync(tubeName) // the tubes which .reserve() is subscribed to
+  return client
+  .watchAsync(tubeName) // the tubes which .reserve() is subscribed to
   .then(function(retTubeNumber) {
     logger.debug("Watching tube: '" + tubeName + "')");
   });
 };
 
-BeanstalkdManager.prototype.__buildClientPromise = co.wrap(function* (){
-  var self = this;
-
-  var connectedClient = yield new Promise(function(resolve, reject){
-    var BEANSTALKD_URL  = config.beanstalkd.host;
-    var BEANSTALKD_PORT = config.beanstalkd.port;
-    var client          = new fivebeans.client(BEANSTALKD_URL, BEANSTALKD_PORT);
+BeanstalkdManager.prototype.__buildConnectionClientPromise = function(host, port){
+  return new Promise(function(resolve, reject){
+    var client = new fivebeans.client(host, port);
     Promise.promisifyAll(client);
 
     client
@@ -141,9 +176,28 @@ BeanstalkdManager.prototype.__buildClientPromise = co.wrap(function* (){
     })
     .connect();
   });
+};
 
-  var tubeName = config.beanstalkd.tube_name;
-  yield [self.__useTube(connectedClient,tubeName), self.__watchTube(connectedClient,tubeName)];
+BeanstalkdManager.prototype.__buildWatchClientPromise = co.wrap(function* (host, port, watchTubeArray){
+  var self = this;
+  var connectedClient = yield this.__buildConnectionClientPromise(host, port);
+
+  for (var i = watchTubeArray.length - 1; i >= 0; i--) {
+    var tubeName = watchTubeArray[i];
+    yield self.__watchTube(connectedClient,tubeName);
+  }
+
+  return connectedClient;
+});
+
+BeanstalkdManager.prototype.__buildUseClientPromise = co.wrap(function* (host, port, useTubeArray){
+  var self = this;
+  var connectedClient = yield this.__buildConnectionClientPromise(host, port);
+
+  for (var i = useTubeArray.length - 1; i >= 0; i--) {
+    var tubeName = useTubeArray[i];
+    yield self.__useTube(connectedClient,tubeName);
+  }
 
   return connectedClient;
 });

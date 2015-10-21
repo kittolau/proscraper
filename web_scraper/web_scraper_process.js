@@ -11,26 +11,15 @@ var BeanstalkdManager    = rootRequire("service/beanstalkd_manager");
 var MongoManager         = rootRequire('service/mongo_manager');
 var config               = rootRequire('config');
 
-function WebScraperProcess(pid, numberOfController){
+function WebScraperProcess(pid, numberOfController,controllerAllocationIDWhiteList){
   var self = this;
 
-  this.pid                  = pid;
-  this.controllerStatusList = [];
-  this.domainConfigLoader   = new DomainConfigLoader();
-  // this.isOnDemandMode       = config.scraper.on_demand_controller_mode === 1;
-  // this.jobProbingIntervalId = null;
-  // this.pendingJobsProbingClient = null;
-
-  for (var i = numberOfController - 1; i >= 0; i--) {
-    var controller = new WebScraperController(this.pid, i, this.domainConfigLoader);
-    var controllerStatus = {
-      controller:controller,
-      isUP : 0
-    };
-
-    this.controllerStatusList.push(controllerStatus);
-  }
-
+  self.pid                  = pid;
+  self.controllerStatusList = [];
+  self.numberOfController   = numberOfController;
+  self.domainConfigLoader   = new DomainConfigLoader();
+  self.AllocationWhiteList  = controllerAllocationIDWhiteList;
+  self.allocatedList        = null;
   // if(this.isOnDemandMode){
   //   if(config.scraper.pending_jobs_treshold <= 0){
   //     throw new Error("config.scraper.pending_jobs_treshold cannot be lower than 0");
@@ -53,6 +42,7 @@ function WebScraperProcess(pid, numberOfController){
   //     .then(self.__onDemandManageController.bind(self));
   //   }, onDemandProbeSeconds);
   // }
+
 }
 
 // WebScraperProcess.prototype.__onDemandManageController = function(status){
@@ -100,6 +90,58 @@ function WebScraperProcess(pid, numberOfController){
 //   }
 //   return upCount;
 // };
+
+
+WebScraperProcess.prototype.allocateController = co.wrap(function*(){
+  var self = this;
+  var loader = self.domainConfigLoader;
+  var maxAllocatableController = self.numberOfController;
+
+  yield loader.checkDomainNameIdentifierDuplicate();
+
+  var requiredAllocationList = yield loader.getControllerAllocationList();
+  var allocationWhiteList    = self.AllocationWhiteList;
+  var allocatedList          = [];
+
+  var totalAllocatedCount = 0;
+  for (var i = requiredAllocationList.length - 1; i >= 0; i--) {
+    var requiredAllocation = requiredAllocationList[i];
+
+    var domainId = requiredAllocation.domainNameIdentifier;
+    var numberOfRequiredController = requiredAllocation.requiredControllerCount;
+
+    if(allocationWhiteList.indexOf(domainId) == -1){
+      continue;
+    }
+
+    allocatedList.push(requiredAllocation);
+    totalAllocatedCount += numberOfRequiredController;
+
+    if(totalAllocatedCount > maxAllocatableController){
+      throw new Error("White listed domain exceed the maximun "+ maxAllocatableController +" of controller:\n" + self.__getAllocationReportString(allocatedList));
+    }
+
+    for (var j = numberOfRequiredController - 1; j >= 0; j--) {
+      var controller = new WebScraperController(self.pid, j, domainId, self.domainConfigLoader);
+      var controllerStatus = {
+        domainId : domainId,
+        controller:controller,
+        isUP : 0
+      };
+      self.controllerStatusList.push(controllerStatus);
+    }
+  }
+
+  self.allocatedList = allocatedList;
+  logger.debug("Web Scraper Process allocation:\n " + self.__getAllocationReportString(allocatedList));
+
+});
+
+WebScraperProcess.prototype.__getAllocationReportString = function(allocatedList){
+  return allocatedList.reduce(function (a, b) {
+    return a + b.domainNameIdentifier + ": require " + b.requiredControllerCount + " controller(s)\n";
+  },"");
+};
 
 WebScraperProcess.prototype.applyProcessGlobalSetting = function(){
   http.globalAgent.maxSockets = config.scraper.globalMaxSockets;

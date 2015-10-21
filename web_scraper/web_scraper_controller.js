@@ -12,14 +12,15 @@ var BeanstalkdManager  = rootRequire("service/beanstalkd_manager");
 var MongoManager       = rootRequire('service/mongo_manager');
 var config             = rootRequire('config');
 
-function WebScraperController(pid, id, domainConfigLoader) {
+function WebScraperController(pid, id,domainTubeName, domainConfigLoader) {
   this.pid                = pid;
   this.id                 = id;
   this.domainConfigLoader = domainConfigLoader;
   this.scrapHandlerLoader = new ScrapHandlerLoader();
   this.isStopped          = false;
-  this.beanstalkdClient   = new BeanstalkdManager();
+  this.beanstalkdClient   = new BeanstalkdManager(config.beanstalkd, domainTubeName);
   this.mongodbClient      = new MongoManager();
+  this.domainTubeName     = domainTubeName;
 }
 
 WebScraperController.prototype.down = function (){
@@ -38,14 +39,11 @@ WebScraperController.prototype.onHandlerError = function(err){
   var urlRequest       = this.urlRequest;
   var beanstalkdClient = this.beanstalkdClient;
 
-  if(urlRequest.getRetryCount() >= config.scraper.retry_count){
-    logger.error("Failed to scrap "+ urlRequest.url + ":\n" + err+"\n"+err.stack);
+  if(urlRequest.isExccessDefaultRetryCount()){
+    logger.error("Failed to scrap "+ urlRequest.url + ":\n" + err + "\n" + err.stack);
   }else{
-    var retryUrlRequest = URLRequest.createFromFailedURLRequest(urlRequest);
-    beanstalkdClient
-    .putURLRequest(retryUrlRequest)
-    .catch(logger.error);
-    logger.warn("Retry to scrap "+ urlRequest.url + ":\n"+err+"\n"+err.stack);
+    beanstalkdClient.putFailedURLRequest(urlRequest,null,10).catch(logger.error);
+    logger.warn("Retry to scrap "+ urlRequest.url + ":\n" + err + "\n" + err.stack);
   }
 };
 
@@ -56,14 +54,12 @@ WebScraperController.prototype.up = function (){
 
     co(function *(){
         while(!self.isStopped){
-
             var startTime = Date.now();
 
             var urlRequest = yield self.beanstalkdClient.consumeURLRequest();
-
-            var services = {
-              'beanstalkdClient': self.beanstalkdClient,
-              'mongodbClient': self.mongodbClient
+            var services   = {
+            'beanstalkdClient': self.beanstalkdClient,
+            'mongodbClient': self.mongodbClient
             };
 
             var HandlerClass = yield self.scrapHandlerLoader.getHandlerClassFor(urlRequest.url);
@@ -76,7 +72,12 @@ WebScraperController.prototype.up = function (){
 
             yield handler
             .handle(urlRequest)
-            .catch(self.onHandlerError.bind({urlRequest:urlRequest,beanstalkdClient:self.beanstalkdClient}));
+            .catch(self.onHandlerError
+            .bind({
+              urlRequest:urlRequest,
+              beanstalkdClient:self.beanstalkdClient
+            })
+            );
 
             var duration = Date.now() - startTime;
 

@@ -21,20 +21,12 @@ function AbstractScrapHandler(services, domainConfig) {
 
   this.domainConfig       = domainConfig;
   this.currentUrlRequest  = null;
-  this.bloomFilterSeenUrl = null;
+  this._seenURL = null;
   this.$                  = null;
 }
 
 AbstractScrapHandler.prototype.getHandleableURLPattern = function (){
     throw new Error('getHandleableURLPattern() is not implemented in ' + this.constructor.name);
-};
-
-AbstractScrapHandler.prototype.getHostname = function (){
-  throw new Error('getHostname() is not implemented in ' + this.constructor.name);
-};
-
-AbstractScrapHandler.prototype.maxConnection = function (){
-  throw new Error('maxConnection() is not implemented in ' + this.constructor.name);
 };
 
 AbstractScrapHandler.prototype.scrap = co.wrap(function*($){
@@ -44,13 +36,7 @@ AbstractScrapHandler.prototype.scrap = co.wrap(function*($){
 AbstractScrapHandler.prototype.getOverriddenRequestConfigBeforeRequest = function(){
   return null;
 };
-//you can override this in subclass to get the jquery implementation you like
-AbstractScrapHandler.prototype.getJqueryEngine = co.wrap(function*(pageSource){
-  return cheerio.load(pageSource);
 
-  // var window = yield jsdom.envAsync(pageSource,null,{src:[jquery]});
-  // return window.$;
-});
 
 //if you like you can override it
 AbstractScrapHandler.prototype.handle = co.wrap(function* (urlRequest){
@@ -58,121 +44,27 @@ AbstractScrapHandler.prototype.handle = co.wrap(function* (urlRequest){
 
   //prepate for this.currentUrlRequest
   this.currentUrlRequest = urlRequest;
-  var url        = urlRequest.url;
-  var payload    = urlRequest.payload;
 
-  //prepate for this.bloomFilterSeenUrl
-  if(payload.bloomFilterSeenUrlArray === undefined){
-    this.bloomFilterSeenUrl = new BloomFilter(8192, 16 );
-
-    this.bloomFilterSeenUrl.add(url);
-    //store bloomfilter's buckets as the payload
-    var array = [].slice.call(this.bloomFilterSeenUrl.buckets);
-    this.currentUrlRequest.payload.bloomFilterSeenUrlArray = array;
+  //prepate for this._seenURL
+  if(urlRequest.isPayloadExist("_seenURLBuckets")){
+    this._seenURL = new BloomFilter(urlRequest.getPayload("_seenURLBuckets"), 3);
   }else{
-    this.bloomFilterSeenUrl = new BloomFilter(payload.bloomFilterSeenUrlArray, 3);
+    this._seenURL = new BloomFilter(8192, 16);
   }
 
-  //prepare for this.$
+
+  this._seenURL.add(urlRequest.url);
+  //store bloomfilter's buckets as the payload
+  var _seenURLBuckets = [].slice.call(this._seenURL.buckets);
+  this.currentUrlRequest.setPayload('_seenURLBuckets', _seenURLBuckets);
+
   var overriddenRequestConfig = self.getOverriddenRequestConfigBeforeRequest();
-  var pageSource              = yield this.requestPageSource(url,null,overriddenRequestConfig);
-  self.$                      = yield self.getJqueryEngine(pageSource);
+  var pageSource              = yield this.requestPageSource(urlRequest.url,null,overriddenRequestConfig);
 
-  return yield self.scrap(self.$);
+  return yield self.scrap(pageSource);
 });
-
-//if the handle function dont yield promise, should use this function to capture error
-AbstractScrapHandler.prototype.onError = function(err) {
-  logger.error(err);
-  logger.error(err.stack);
-};
-
-AbstractScrapHandler.prototype.getLinkByCSS = function(selector){
-  var self = this;
-  var $    = self.$;
-
-  var relativeURL = $(selector).attr("href");
-  return self.__convertToAbsoluteURL(relativeURL);
-};
-
-AbstractScrapHandler.prototype.__convertToAbsoluteURL = function(relativeURL){
-  if(relativeURL === undefined){
-      return undefined;
-  }
-  return url.resolve(this.currentUrlRequest.url, relativeURL);
-};
-
-AbstractScrapHandler.prototype.getLinksContains = function(targetHostname){
-  var self = this;
-  var $    = self.$;
-
-  var res = [];
-
-  $('a').each(function(i,e){
-    var relativeURL = $(e).attr('href');
-    var absoluteURL = self.__convertToAbsoluteURL(relativeURL);
-    if(absoluteURL === undefined){
-      return;
-    }
-    var hostname = url.parse(absoluteURL).hostname;
-    if(hostname === null){
-      //if not a valid hostname
-      return;
-    }
-
-    if(hostname.indexOf(targetHostname) > -1) {
-      res.push(absoluteURL);
-    }
-  });
-
-  return res;
-};
-
-AbstractScrapHandler.prototype.putURLRequest = co.wrap(function*(newUrl,payload,checkBloomFilter){
-  checkBloomFilter = checkBloomFilter || true;
-
-  var isURLBlank = !newUrl || /^\s*$/.test(newUrl);
-  if(isURLBlank){
-    throw new Error("cannot put empty URL in to job queue");
-  }
-
-  if(checkBloomFilter && this.bloomFilterSeenUrl.test(newUrl)){
-    logger.info(newUrl + " may has been visited before");
-    return;
-  }
-
-  var newPayload = this.currentUrlRequest.payload;
-  this.extendJSON(newPayload,payload);
-
-  var urlRequest = new URLRequest(newUrl,newPayload);
-  yield this.beanstalkdClient.putURLRequest(urlRequest);
-});
-
-
-AbstractScrapHandler.prototype.__writeFile = co.wrap(function*(path,content){
-  yield fs.writeFileAsync(path, content);
-});
-
-AbstractScrapHandler.prototype.saveText = co.wrap(function*(filename,content){
-  var filepath = path.join(config.root,"scraped_content",filename);
-  yield this.__writeFile(filepath, content);
-});
-
-AbstractScrapHandler.prototype.extendJSON = function (target) {
-    var sources = [].slice.call(arguments, 1);
-
-    for (var i = sources.length - 1; i >= 0; i--) {
-      var source = sources[i];
-      for (var prop in source) {
-            target[prop] = source[prop];
-        }
-    }
-
-    return target;
-};
 
 AbstractScrapHandler.prototype.requestPageSource = co.wrap(function*(url, method, overriddenRequestConfig){
-
   method = method || "GET";
 
   var requestConfig = {
@@ -180,7 +72,8 @@ AbstractScrapHandler.prototype.requestPageSource = co.wrap(function*(url, method
     method : method,
     followRedirect : true,
     maxRedirects: 10,
-    timeout : 10000,
+    timeout : config.scraper.default_request_timeout_seconds * 1000,
+    //default to global agent
     agent : false
   };
 
@@ -193,6 +86,7 @@ AbstractScrapHandler.prototype.requestPageSource = co.wrap(function*(url, method
     this.extendJSON(requestConfig,overriddenRequestConfig);
   }
 
+  //domain config callback
   if(this.domainConfig.onRequestStart !== undefined){
     this.domainConfig.onRequestStart(url,method,overriddenRequestConfig);
   }
@@ -231,11 +125,146 @@ AbstractScrapHandler.prototype.requestPageSource = co.wrap(function*(url, method
   }
   });
 
+  //domain config callback
   if(this.domainConfig.onRequestFinish !== undefined){
     this.domainConfig.onRequestFinish(url,method,overriddenRequestConfig);
   }
 
   return result[1];
 });
+
+
+//if the handle function dont yield promise, should use this function to capture error
+AbstractScrapHandler.prototype.onNonYieldedError = function(err) {
+  logger.error(err);
+  logger.error(err.stack);
+};
+
+
+//you can override this in subclass to get the jquery implementation you like
+AbstractScrapHandler.prototype.getCheerioPromise = co.wrap(function*(pageSource){
+  return cheerio.load(pageSource);
+});
+
+//the loading time is about 3xxms, which is 1x time of cheerio
+//use jquery when it is really needed
+AbstractScrapHandler.prototype.getJqueryPromise = co.wrap(function*(pageSource){
+  var window = yield jsdom.envAsync(
+    pageSource,
+    null,
+    {src:[jquery]}
+  );
+  return window.$;
+});
+
+
+//this will help filter all invalid non crawlable url, only valid url will be returned
+AbstractScrapHandler.prototype.hrefToCrawlableAbsoluteURL = function(anyHref){
+  // case if anyHref is undefined, null, etc...
+  if(!anyHref){
+      return undefined;
+  }
+  // case: href="  "
+  var isURLBlank =  /^\s*$/.test(anyHref);
+  if(isURLBlank){
+    return undefined;
+  }
+
+  // case: href="#"
+  var isStartingWithHash = /^#.*/.test(anyHref);
+  if(isStartingWithHash){
+    return undefined;
+  }
+
+  return url.resolve(this.currentUrlRequest.url, anyHref);
+};
+
+AbstractScrapHandler.prototype.getAllLinksContains = function($, string){
+  var self = this;
+
+  var res = [];
+  $('a').each(function(i,e){
+    var absoluteURL = self.hrefToCrawlableAbsoluteURL($(e).attr('href'));
+    if(absoluteURL === undefined){
+      return;
+    }
+    if(absoluteURL.indexOf(string) > -1) {
+      res.push(absoluteURL);
+    }
+  });
+
+  return res;
+};
+
+
+AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBloomFilter){
+  checkBloomFilter = checkBloomFilter || true;
+
+  var absolutePath = this.hrefToCrawlableAbsoluteURL(href);
+  if(!absolutePath){
+    logger.debug(href + " is not an crawlable absolute url");
+    return;
+  }
+
+  yield this.__putNewURLRequest(absolutePath,payload,checkBloomFilter);
+});
+
+//if you are sure href must exist
+AbstractScrapHandler.prototype.crawl = co.wrap(function*(href,payload,checkBloomFilter){
+  checkBloomFilter = checkBloomFilter || true;
+
+  var absolutePath = this.hrefToCrawlableAbsoluteURL(href);
+  if(!absolutePath){
+    throw new Error(href + " is not a valid absolute url, cannot put in to job queue");
+  }
+
+  yield this.__putNewURLRequest(absolutePath,payload,checkBloomFilter);
+});
+
+AbstractScrapHandler.prototype.__putNewURLRequest = co.wrap(function*(absolutePath,payload,checkBloomFilter){
+  if(checkBloomFilter && this._seenURL.test(absolutePath)){
+    logger.warn(absolutePath + " may has been visited before");
+    return;
+  }
+
+  var newPayload = this.currentUrlRequest.clonePayload();
+  this.extendJSON(newPayload,payload);
+
+  var urlRequest = new URLRequest(absolutePath,newPayload);
+  yield this.beanstalkdClient.putURLRequest(urlRequest);
+});
+
+
+AbstractScrapHandler.prototype.__writeFile = co.wrap(function*(path,content){
+  yield fs.writeFileAsync(path, content);
+});
+
+AbstractScrapHandler.prototype.saveText = co.wrap(function*(filename,content){
+  var filepath = path.join(config.root,"scraped_content",filename);
+  yield this.__writeFile(filepath, content);
+});
+
+
+AbstractScrapHandler.prototype.trimStringProperties = function(obj){
+  if (null === obj || "object" != typeof obj) return obj;
+  for (var attr in obj) {
+        if (!obj.hasOwnProperty(attr)) continue;
+        if(typeof obj[attr] != 'string') continue;
+        obj[attr] = obj[attr].trim();
+  }
+};
+
+AbstractScrapHandler.prototype.extendJSON = function (target) {
+    var sources = [].slice.call(arguments, 1);
+
+    for (var i = sources.length - 1; i >= 0; i--) {
+      var source = sources[i];
+      for (var prop in source) {
+            target[prop] = source[prop];
+        }
+    }
+
+    return target;
+};
 
 module.exports = Promise.promisifyAll(AbstractScrapHandler);

@@ -18,16 +18,21 @@ ExampleHandler.prototype.getHandleableURLPattern = function (){
 };
 
 //test the code in chrome first
-getProxyJPHandler.prototype.scrap = co.wrap(function*($){
+ExampleHandler.prototype.scrap = co.wrap(function*(pageSource){
   var self = this;
   var promises = [];
 
-  var allDomainLink = this.getLinksContains("getproxy.jp");
+  // helper to get either cheerio, which has a fast loading speed (3xms)
+  var $ = yield self.getCheerioPromise(pageSource);
+  // helper to get either jquery via jsdom, which has a slow loading speed (3xxms)
+  var $ = yield self.getJqueryPromise(pageSource);
 
-  var nextPageUrl = this.getLinkByCSS('a[title="next page"]');
-  if(nextPageUrl !== undefined){
-    self.putURLRequest(nextPageUrl).catch(self.onError);
-  }
+  // get all the links in the page
+  var allDomainLink = self.getAllLinksContains($, "getproxy.jp");
+
+  // try to crawl
+  var nextPageUrl = $('a[title="next page"]').attr("href");
+  self.tryCrawl(nextPageUrl).catch(self.onNonYieldedError);
 
   var trs = $('tr.white, tr.gray');
   trs.each(function(i, tr){
@@ -44,34 +49,31 @@ getProxyJPHandler.prototype.scrap = co.wrap(function*($){
       return;
     }
 
-    var hostname = rawhostname.trim();
-    var ip =  hostname.split(':')[0].trim();
-    var port =  hostname.split(':')[1].trim();
+    var ip =  rawhostname.split(':')[0].trim();
+    var port =  rawhostname.split(':')[1].trim();
     var country = rawcountry.toLowerCase().trim();
     var responseTime = rawresponseTime.replace("s", "").trim();
     var anonymity = 0;
-    var proxyType = rawproxyType.trim();
-    var checkDate = rawcheckDate.trim();
 
     var data = {
-      hostname : hostname,
+      hostname : rawhostname,
       ip: ip,
       port: port,
       country : country,
       response_time : responseTime,
       anonymity : anonymity,
-      proxy_type : proxyType,
-      check_date : checkDate
+      proxy_type : rawproxyType,
+      check_date : rawcheckDate
     };
 
-     self.mongodbClient
+    self.trimStringProperties(data);
+
+    self.mongodbClient
      .getPromisifiedCollection('web_proxys')
-     .updateAsync({ip:ip}, data, {upsert:true}).catch(self.onError);
+     .updateAsync({ip:ip}, data, {upsert:true}).catch(self.onNonYieldedError);
   });
 
   yield promises;
-
-  logger.debug("scrapped");
 });
 
-module.exports = getProxyJPHandler;
+module.exports = ExampleHandler;

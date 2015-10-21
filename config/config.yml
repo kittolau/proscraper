@@ -15,13 +15,15 @@ development:
     retry_count: 0
     #Maximum global socket per process
     globalMaxSockets: 20
+    default_request_timeout_seconds: 10
     #Number of WebScraperController per process
-    controller_count: 1
+    controller_count: 80
     #cluster_mode = 0:
     #  there will be only one WebScraperProcess
     #cluster_mode = 1:
     #  there will be multiple WebScraperProcess in same machine depends on number of CPU
     cluster_mode: 0
+    default_tube_name: nps_other_domain
   logger:
     <<: *logger
     file_log:
@@ -39,7 +41,6 @@ development:
     database: webot_development
   beanstalkd:
     <<: *beanstalkd
-    tube_name: node_promise_scraper_development
 
 production:
   scraper:
@@ -65,5 +66,4 @@ production:
 
   beanstalkd:
     <<: *beanstalkd
-    tube_name: node_promise_scraper_production
 

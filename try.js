@@ -14,6 +14,9 @@ var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
 
 var main = function(){
 
+  var SEED_URL = "http://www.getproxy.jp/en/";
+  var DOMAIN_ID = 'getproxy.jp';
+
   var workerProcess = null;
 
   process.on('SIGINT', function() {
@@ -29,17 +32,29 @@ var main = function(){
 
   console.time("pid "+ process.pid);
 
-  workerProcess = new WebScraperProcess(process.pid, config.scraper.controller_count);
+  workerProcess = new WebScraperProcess(
+    process.pid,
+    config.scraper.controller_count,
+    ['getproxy.jp','spys.ru','xroxy.com','gatherproxy.com']
+  );
   workerProcess.applyProcessGlobalSetting();
-  workerProcess.up();
-
-  var seedQueueClient = new BeanstalkdManager();
-  var urlRequest = new URLRequest("http://www.getproxy.jp/en/",'');
-  seedQueueClient
-  .putURLRequest(urlRequest)
+  workerProcess
+  .allocateController()
   .then(function(){
-    seedQueueClient.close();
+    workerProcess.up();
+  })
+  .catch(function(err){
+    logger.error(err);
+    logger.error(err.stack);
   });
+
+  // var seedQueueClient = new BeanstalkdManager(config.beanstalkd, DOMAIN_ID);
+  // var urlRequest = new URLRequest(SEED_URL);
+  // seedQueueClient
+  // .putURLRequest(urlRequest)
+  // .then(function(){
+  //   seedQueueClient.close();
+  // });
 
 };
 

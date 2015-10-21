@@ -4,28 +4,32 @@ global.rootRequire = function(name) {
     return require(__dirname + '/' + name);
 };
 
+var Promise           = require('bluebird');
 var URLRequest        = rootRequire('web_scraper/url_request');
 var logger            = rootRequire('service/logger_manager');
 var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
-var config     = rootRequire('config');
+var config            = rootRequire('config');
 
 var main = function(){
-
-  function lookUpTubeStat(client){
-    return client.stats_tubeAsync(config.beanstalkd.tube_name);
-  }
 
   function clearConsole(){
     console.log('\033[2J');
   }
 
-  var seedQueueClient = new BeanstalkdManager();
+  var allTube = [];
+  allTube.push(new BeanstalkdManager(config.beanstalkd,'getproxy.jp'));
+  allTube.push(new BeanstalkdManager(config.beanstalkd,'spys.ru'));
+  allTube.push(new BeanstalkdManager(config.beanstalkd,'xroxy.com'));
+  allTube.push(new BeanstalkdManager(config.beanstalkd,'gatherproxy.com'));
+
   var startTime = Date.now();
 
   setInterval(function() {
-    seedQueueClient
-    .clientPromise
-    .then(lookUpTubeStat)
+    Promise
+    .all(allTube)
+    .map(function(c){
+      return c.lookUpTubeStat()
+    })
     .then(function(s){
       clearConsole();
       return s;

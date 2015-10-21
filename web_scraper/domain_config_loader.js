@@ -14,14 +14,14 @@ var AbstractDomainConfig = rootRequire('web_scraper/abstract_domain_config');
 
 function DomainConfigLoader() {
   Loader.call(this);
-
-  this.domainConfigMappings = this.__builddDomainConfigMappings();
+  this.domainConfigArray = this.__buildddomainConfigArray();
+  //check integrity immediate after this.domainConfigArray is ready
 }
 inherits(DomainConfigLoader, Loader);
 
-DomainConfigLoader.prototype.__builddDomainConfigMappings = co.wrap(function* (){
+DomainConfigLoader.prototype.__buildddomainConfigArray = co.wrap(function* (){
   var self = this;
-  var domainConfigMappings = [];
+  var domainConfigArray = [];
 
   var handlersDir = path.join(__dirname, "scrap_handler");
   var files = yield this.recursiveGetfile(handlersDir);
@@ -37,28 +37,13 @@ DomainConfigLoader.prototype.__builddDomainConfigMappings = co.wrap(function* ()
       }
     })
     .then(function(){
-      var DomainConfigClass         = require(filePath);
+      var DomainConfigClass = require(filePath);
       var isAbstractDomainConfigSubclass = DomainConfigClass.prototype instanceof AbstractDomainConfig;
       if(!isAbstractDomainConfigSubclass){
         //skip
         return;
       }
-
-      var hostnamePatternArray           = DomainConfigClass.prototype.getHandleableHostnamePatternArray();
-
-      var isValidPatternArray = Array.isArray(hostnamePatternArray) && hostnamePatternArray.every(function(elm){ return elm instanceof RegExp;} );
-      if(!isValidPatternArray){
-        throw new Error("DomainConfigClass.getHandleablehostnamePatternArray is not an array of RegExp in " + filePath);
-      }
-
-      var domainConfigInstance = new DomainConfigClass();
-
-      for (var i = hostnamePatternArray.length - 1; i >= 0; i--) {
-        var hostnamePattern = hostnamePatternArray[i];
-
-          domainConfigMappings.push({'hostnamePattern':hostnamePattern, 'domainConfigInstance':domainConfigInstance});
-
-      }
+      domainConfigArray.push(new DomainConfigClass());
 
       logger.debug("Agent config loaded: " + filePath);
     });
@@ -66,7 +51,43 @@ DomainConfigLoader.prototype.__builddDomainConfigMappings = co.wrap(function* ()
 
   logger.debug("Agent config Loaded Completely");
 
-  return domainConfigMappings;
+  return domainConfigArray;
+});
+
+DomainConfigLoader.prototype.checkDomainNameIdentifierDuplicate =  co.wrap(function*(){
+  var allocationList = yield this.getControllerAllocationList();
+
+  var sorted_arr = allocationList.sort(function(a, b){
+      if(a.domainNameIdentifier < b.domainNameIdentifier) return -1;
+      if(a.domainNameIdentifier > b.domainNameIdentifier) return 1;
+      return 0;
+  });
+  var dulplicatedResults = [];
+
+  for (var i = 0; i < allocationList.length - 1; i++) {
+      if (sorted_arr[i + 1].domainNameIdentifier == sorted_arr[i].domainNameIdentifier) {
+          dulplicatedResults.push(sorted_arr[i].domainNameIdentifier);
+      }
+  }
+
+  if(dulplicatedResults.length > 0){
+    throw new Error("domain config id dulplication occur in " + dulplicatedResults.toString());
+  }
+});
+
+DomainConfigLoader.prototype.getControllerAllocationList = co.wrap(function*(){
+  var self = this;
+
+  var domainConfigArray = yield self.domainConfigArray;
+
+  var res = [];
+  for (var i = 0, len = domainConfigArray.length; i < len; i++) {
+    var domainConfig = domainConfigArray[i];
+    res.push(domainConfig.getControllerAllocationList());
+  }
+
+  var merged = [].concat.apply([], res);
+  return merged;
 });
 
 DomainConfigLoader.prototype.findConfigFor = co.wrap(function* (url){
@@ -76,16 +97,13 @@ DomainConfigLoader.prototype.findConfigFor = co.wrap(function* (url){
     throw new Error(url + " is not a string");
   }
 
-  var domainConfigMappings = yield self.domainConfigMappings;
+  var domainConfigArray = yield self.domainConfigArray;
 
-  for (var i = 0, len = domainConfigMappings.length; i < len; i++) {
-    var domainConfigMap = domainConfigMappings[i];
+  for (var i = 0, len = domainConfigArray.length; i < len; i++) {
+    var domainConfig = domainConfigArray[i];
 
-    var hostnamePattern = domainConfigMap.hostnamePattern;
-    var domainConfigInstance = domainConfigMap.domainConfigInstance;
-
-    if(url.match(hostnamePattern)){
-      return domainConfigInstance;
+    if(domainConfig.canHandleURL(url)){
+      return domainConfig;
     }
   }
 
