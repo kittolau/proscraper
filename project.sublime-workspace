@@ -4,6 +4,18 @@
 		"selected_items":
 		[
 			[
+				"on",
+				"onSeriousError	(web_scraper_controller.js)"
+			],
+			[
+				"map",
+				"mapLimit	(test.js)"
+			],
+			[
+				"has",
+				"hasOwnProperty"
+			],
+			[
 				"len",
 				"length	(abstract_domain_config.js)"
 			],
@@ -376,18 +388,13 @@
 	"buffers":
 	[
 		{
-			"file": "web_scraper/web_scraper_process.js",
+			"contents": "/* jshint node: true, esnext:true */\n'use strict';\nvar Promise              = require('bluebird');\nvar co                   = require('co');\nvar inherits             = require('util').inherits;\nvar AbstractScrapHandler = rootRequire('web_scraper/abstract_scrap_handler');\nvar logger               = rootRequire('service/logger_manager');\nvar url                  = require('url');\nvar cheerio              = require('cheerio');\nvar BloomFilter          = require('bloomfilter');\n\n\n//var constructor = function <contructor name>()\nfunction ScrapHandler(urlRequest, services,domainConfig) {\n  AbstractScrapHandler.call(this,urlRequest, services,domainConfig);\n}\ninherits(ScrapHandler, AbstractScrapHandler);\n\nScrapHandler.prototype.getHandleableURLPattern = function (){\n  return [\n  {\n    'pattern': /gatherproxy\\.com\\/proxylist\\/country\\//g,\n    'scrapFunction': '$scrapCountryPage'\n  }\n  ];\n};\n\nScrapHandler.prototype.getOverriddenRequestConfigBeforeRequest = function(currentUrlRequest){\n  var self = this;\n\n  var country =null;\n  var pageIdx =null;\n  if( !currentUrlRequest.isPayloadExist(\"PageIdx\") || !currentUrlRequest.isPayloadExist(\"Country\")){\n    pageIdx = 1;\n    var queryStringObj = self.QueryStringToObject(currentUrlRequest.url);\n    country = queryStringObj.c.toLowerCase();\n  }else{\n    country = currentUrlRequest.getPayload(\"Country\");\n    pageIdx = currentUrlRequest.getPayload(\"PageIdx\");\n  }\n\n  if(/gatherproxy\\.com\\/proxylist\\/country/g.test(currentUrlRequest.url)){\n    var formBody = {\n      Country: country,\n      PageIdx: pageIdx\n    };\n    return self.buildFormRequestConfig(formBody);\n  }\n};\n\n\n//test the code in chrome first\nScrapHandler.prototype.$scrapCountryPage = co.wrap(function*(pageSource){\n\n  var self = this;\n  var promises = [];\n\n  var $ = yield self.getCheerioPromise(pageSource);\n\n  var trs = $('.proxy-list tr');\n  for (var i = trs.length - 1; i >= 0; i--) {\n    var tds = $( trs[i] ).children();\n\n    var ip = $(tds[1]).text();\n    if(!/\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}/g.test(ip)){\n      continue;\n    }\n    console.log(ip);\n  }\n\n});\n\nmodule.exports = ScrapHandler;\n",
+			"file": "web_scraper/scrap_handler/webproxy/www-gatherproxy-com.js",
+			"file_size": 2186,
+			"file_write_time": 130900101818426435,
 			"settings":
 			{
-				"buffer_size": 6317,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "web_scraper/scrap_handler/webproxy/xroxy-com.js",
-			"settings":
-			{
-				"buffer_size": 1060,
+				"buffer_size": 2114,
 				"line_ending": "Windows"
 			}
 		},
@@ -395,47 +402,7 @@
 			"file": "try.js",
 			"settings":
 			{
-				"buffer_size": 1675,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "tube_create_job.js",
-			"settings":
-			{
-				"buffer_size": 1211,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "web_scraper/scrap_handler/webproxy/www-getproxy-jp.js",
-			"settings":
-			{
-				"buffer_size": 2390,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "web_scraper/scrap_handler/webproxy/domain_config.js",
-			"settings":
-			{
-				"buffer_size": 2078,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "tube_stat.js",
-			"settings":
-			{
-				"buffer_size": 1242,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "web_scraper/url_request.js",
-			"settings":
-			{
-				"buffer_size": 2153,
+				"buffer_size": 1528,
 				"line_ending": "Windows"
 			}
 		}
@@ -685,47 +652,53 @@
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_example"
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_template"
 	],
 	"file_history":
 	[
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/spys-ru.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/spys-ru - Copy (2).js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/web_scraper_controller.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/domain_config_detail.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/domain_config_loader.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/domain_config.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/test.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/try.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/www-getproxy-jp.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/config/config.yml",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/abstract_scrap_handler.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/test.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_template/scrap_handler.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/domain_config.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/config/config.yml",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/index.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/try.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/web_scraper_controller.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/tube_create_job.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/tube_clear.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/service/logger_manager.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/gatherproxyHandler.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/www-getproxy-jp.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/tube_stat.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/domain_config_detail.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_template/domain_config.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/web_scraper_process.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_template/what-ever-site-you-want-com.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_loader.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/abstract_domain_config.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/domain_config_loader.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/url_request.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/xroxy-com.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/spys-ru.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/service/beanstalkd_manager.js",
+		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/spys-ru - Copy (2).js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_example/domain_config.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_example/what-ever-site-you-want-com.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/abstract_domain_config.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/tube_stat.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/service/beanstalkd_manager.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/tube_clear.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/web_scraper_process.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/url_request.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_example/domain_config_detail.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/url_example.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/bloomfilter.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/aaaaaaaaaaa.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/index.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/webproxy/agent_config.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/try/request_try_code.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/request_try_code.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/request_agent_speed_test.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/request_proxy_speed_test.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/request_tor_speed_test.js",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/tube_create_job.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/request_normal_speed_test.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/request_try.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/request_speed_test.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/test/test.java",
 		"/C/Users/kitto/Desktop/Temp/test.java",
-		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler_loader.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/agent_builder.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/scrap_handler/index.js",
 		"/C/Users/kitto/Desktop/Work/vagrant_workspace/webbot/node-promise-scraper/web_scraper/agent_config_loader.js",
@@ -810,13 +783,7 @@
 		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/app/controllers/api/v1/user_posts_controller.rb",
 		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/config/deploy/generator/cp/unicorn.template.rb",
 		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/config/deploy/generator/template_deploy_script/generate_deploy_key.template.sh",
-		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/config/deploy/generator/template_deploy_script/create_deploy_user.template.sh",
-		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/config/deploy/generator/template_deploy_script/local/git_add_remote_repo.template.sh",
-		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/config/deploy/generator/template_deploy_script/local/add_private_key_to_current_user.template.sh",
-		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/app/controllers/api/v1/comments_controller.rb",
-		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/test/fixtures/users.yml",
-		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/app/controllers/application_controller.rb",
-		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/app/controllers/users/authentications_controller.rb"
+		"/C/Users/kittolau/Desktop/p/sup/HA/HelpAround_Backend/helpAround/config/deploy/generator/template_deploy_script/create_deploy_user.template.sh"
 	],
 	"find":
 	{
@@ -835,6 +802,43 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"{3}",
+			"obj[attr]",
+			"domainConfigDetail",
+			"DomainConfigDetail",
+			"domainConfigDetail",
+			"gatherproxyHandler",
+			"default_request_timeout_seconds",
+			"default_tube_name",
+			"logger.info",
+			"gatherproxyHandler",
+			"ExampleDomainConfig",
+			"asyncJobLimit",
+			"asyncJobLimitInController",
+			"getProxyJPHandler",
+			"this",
+			"getCheerioPromise",
+			"parent",
+			"isPayloadExist()",
+			"null,",
+			"20",
+			"requiredControllerCountPerProcess",
+			"requiredControllerCount",
+			"Things",
+			"getHandleableURLPattern",
+			"__createNewCrawl",
+			"this.$",
+			"extendPayload",
+			"oldPayload",
+			"new URLRequest",
+			"__createNewFailedURLRequestFromURLRequest",
+			"tryCrawl",
+			"isValidURI",
+			"createNewURLRequestfromURLRequest",
+			"createNewFailedURLRequestFromURLRequest",
+			"createNewURLRequestfromURLRequest",
+			"new URLRequest",
+			"this.",
 			"this",
 			"requiredControllerCount",
 			"__buildddomainConfigArray",
@@ -925,44 +929,7 @@
 			"AgentConfigLoader",
 			"agentMappings",
 			"AgentMappings",
-			"agentMappings",
-			"AgentMappings",
-			"agentMappings",
-			"AgentLoader",
-			"net",
-			"info",
-			"logger.info",
-			"onMinorError",
-			"WEBOT_ENV",
-			"dispatcher",
-			"ScrapDispatcher",
-			"agentMapping",
-			"AgentMapping",
-			"agentMapping",
-			"AgentMapping",
-			"agentMapping",
-			"scrapHandlers",
-			"agentInstance",
-			"handlers",
-			"scrapHandlerPath",
-			"ScrapHandlerLoader",
-			"__bliudScrapHandlersPromise",
-			"ScrapDispatcher",
-			"Things",
-			"hostAgent",
-			"return Promise.reject(",
-			"forEach",
-			"onError",
-			"__buildClient",
-			"dbClient",
-			"queueClient",
-			"this",
-			"scrapHandlers",
-			"this",
-			"mongoClient",
-			"BeanstalkdClient",
-			"normalizedPath",
-			"ScrapHandlers"
+			"agentMappings"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -980,566 +947,24 @@
 	"groups":
 	[
 		{
-			"selected": 5,
-			"sheets":
-			[
-				{
-					"buffer": 0,
-					"file": "web_scraper/web_scraper_process.js",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 6317,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								2514,
-								2514
-							]
-						],
-						"settings":
-						{
-							"BracketHighlighterBusy": false,
-							"bh_regions":
-							[
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"color_scheme": "Packages/User/Color Highlighter/themes/Monokai (SL).tmTheme",
-							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 546.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 7,
-					"type": "text"
-				},
-				{
-					"buffer": 1,
-					"file": "web_scraper/scrap_handler/webproxy/xroxy-com.js",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1060,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								713,
-								713
-							]
-						],
-						"settings":
-						{
-							"BracketHighlighterBusy": false,
-							"bh_regions":
-							[
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"color_scheme": "Packages/User/Color Highlighter/themes/Monokai (SL).tmTheme",
-							"syntax": "Packages/JavaScript/JavaScript.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 6,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
-					"file": "try.js",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1675,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1654,
-								1655
-							]
-						],
-						"settings":
-						{
-							"BracketHighlighterBusy": false,
-							"bh_regions":
-							[
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"color_scheme": "Packages/User/Color Highlighter/themes/Monokai (SL).tmTheme",
-							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": -0.0,
-						"translation.y": 66.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 5,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "tube_create_job.js",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1211,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1196,
-								1196
-							]
-						],
-						"settings":
-						{
-							"BracketHighlighterBusy": false,
-							"bh_regions":
-							[
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"color_scheme": "Packages/User/Color Highlighter/themes/Monokai (SL).tmTheme",
-							"syntax": "Packages/JavaScript/JavaScript.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 2,
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "web_scraper/scrap_handler/webproxy/www-getproxy-jp.js",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 2390,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								930,
-								930
-							]
-						],
-						"settings":
-						{
-							"BracketHighlighterBusy": false,
-							"bh_regions":
-							[
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"color_scheme": "Packages/User/Color Highlighter/themes/Monokai (SL).tmTheme",
-							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": -0.0,
-						"translation.y": 192.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "web_scraper/scrap_handler/webproxy/domain_config.js",
-					"semi_transient": true,
-					"settings":
-					{
-						"buffer_size": 2078,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								0,
-								0
-							]
-						],
-						"settings":
-						{
-							"BracketHighlighterBusy": false,
-							"bh_regions":
-							[
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
-							],
-							"color_scheme": "Packages/User/Color Highlighter/themes/Monokai (SL).tmTheme",
-							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": -0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
-					"type": "text"
-				}
-			]
-		},
-		{
 			"selected": 0,
 			"sheets":
 			[
 				{
-					"buffer": 6,
-					"file": "tube_stat.js",
+					"buffer": 0,
+					"file": "web_scraper/scrap_handler/webproxy/www-gatherproxy-com.js",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1242,
+						"buffer_size": 2114,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								958,
-								958
+								1972,
+								1946
 							]
 						],
 						"settings":
@@ -1547,11 +972,51 @@
 							"BracketHighlighterBusy": false,
 							"bh_regions":
 							[
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
 								"bh_single_quote",
 								"bh_single_quote_center",
 								"bh_single_quote_open",
 								"bh_single_quote_close",
 								"bh_single_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
 								"bh_angle",
 								"bh_angle_center",
 								"bh_angle_open",
@@ -1561,47 +1026,7 @@
 								"bh_square_center",
 								"bh_square_open",
 								"bh_square_close",
-								"bh_square_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
+								"bh_square_content"
 							],
 							"color_scheme": "Packages/User/Color Highlighter/themes/Monokai (SL).tmTheme",
 							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
@@ -1609,27 +1034,27 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 226.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 0,
 					"type": "text"
 				},
 				{
-					"buffer": 7,
-					"file": "web_scraper/url_request.js",
-					"semi_transient": true,
+					"buffer": 1,
+					"file": "try.js",
+					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2153,
+						"buffer_size": 1528,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								714,
-								714
+								874,
+								874
 							]
 						],
 						"settings":
@@ -1637,11 +1062,51 @@
 							"BracketHighlighterBusy": false,
 							"bh_regions":
 							[
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
 								"bh_single_quote",
 								"bh_single_quote_center",
 								"bh_single_quote_open",
 								"bh_single_quote_close",
 								"bh_single_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
 								"bh_angle",
 								"bh_angle_center",
 								"bh_angle_open",
@@ -1651,47 +1116,7 @@
 								"bh_square_center",
 								"bh_square_open",
 								"bh_square_close",
-								"bh_square_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_double_quote",
-								"bh_double_quote_center",
-								"bh_double_quote_open",
-								"bh_double_quote_close",
-								"bh_double_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content",
-								"bh_unmatched",
-								"bh_unmatched_center",
-								"bh_unmatched_open",
-								"bh_unmatched_close",
-								"bh_unmatched_content"
+								"bh_square_content"
 							],
 							"color_scheme": "Packages/User/Color Highlighter/themes/Monokai (SL).tmTheme",
 							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
@@ -1699,10 +1124,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 50.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 4,
+					"stack_index": 1,
 					"type": "text"
 				}
 			]
@@ -1725,18 +1150,11 @@
 				0,
 				1,
 				1
-			],
-			[
-				1,
-				0,
-				2,
-				1
 			]
 		],
 		"cols":
 		[
 			0.0,
-			0.5,
 			1.0
 		],
 		"rows":
@@ -1771,6 +1189,10 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"test",
+				"test.js"
+			],
 			[
 				"urlreq",
 				"web_scraper\\url_request.js"
@@ -2204,7 +1626,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 174.0,
+	"side_bar_width": 269.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{

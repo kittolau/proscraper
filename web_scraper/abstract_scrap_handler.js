@@ -7,6 +7,7 @@ var co          = require('co');
 var request     = Promise.promisify(require('request'));
 var url         = require('url');
 var cheerio     = require('cheerio');
+var Qs          = require('qs');
 var jquery      = fs.readFileSync(require.resolve('jquery'), "utf-8");
 var jsdom       = Promise.promisifyAll(require("jsdom"));
 var BloomFilter = require('bloomfilter').BloomFilter;
@@ -16,26 +17,26 @@ var logger      = rootRequire('service/logger_manager');
 
 
 function AbstractScrapHandler(urlRequest, services, domainConfig) {
-  this.beanstalkdClient  = services.beanstalkdClient;
-  this.mongodbClient     = services.mongodbClient;
+  this.beanstalkdClient     = services.beanstalkdClient;
+  this.mongodbClient        = services.mongodbClient;
 
-  this.domainConfig       = domainConfig;
+  this.domainConfig         = domainConfig;
 
-  this.currentUrlRequest = urlRequest;
+  this.currentUrlRequest    = urlRequest;
 
   //prepate for this._seenURL
   if(urlRequest.isPayloadExist("_seenURLBuckets")){
-    this._seenURL = new BloomFilter(urlRequest.getPayload("_seenURLBuckets"), 3);
+  this._seenURL             = new BloomFilter(urlRequest.getPayload("_seenURLBuckets"), 3);
   }else{
-    this._seenURL = new BloomFilter(8192, 16);
+  this._seenURL             = new BloomFilter(8192, 16);
   }
 
   this._seenURL.add(urlRequest.url);
   //store bloomfilter's buckets as the payload
-  var _seenURLBuckets = [].slice.call(this._seenURL.buckets);
+  var _seenURLBuckets       = [].slice.call(this._seenURL.buckets);
   this.currentUrlRequest.setPayload('_seenURLBuckets', _seenURLBuckets);
 
-  this.domainConfigDetail = this.domainConfig.getDomainConfigDetail(urlRequest.url);
+  this.domainConfigDetail   = this.domainConfig.getDomainConfigDetail(urlRequest.url);
 
   this.handleableURLPattern = this.getHandleableURLPattern();
 }
@@ -48,33 +49,41 @@ AbstractScrapHandler.prototype.scrap = co.wrap(function*($){
   throw new Error('scrap() is not implemented in ' + this.constructor.name);
 });
 //you can override this in subclass to assign specifc request's config
-AbstractScrapHandler.prototype.getOverriddenRequestConfigBeforeRequest = function(){
+AbstractScrapHandler.prototype.getOverriddenRequestConfigBeforeRequest = function(currentUrlRequest){
   return null;
 };
 
 //if you like you can override it
 AbstractScrapHandler.prototype.handle = co.wrap(function* (){
+  try{
+    console.trace("aa")
+    throw new Error("test")
+  }catch(err){
+    throw err;
+  }
   var self = this;
 
-  var overriddenRequestConfig = self.getOverriddenRequestConfigBeforeRequest();
+  var overriddenRequestConfig = self.getOverriddenRequestConfigBeforeRequest(self.currentUrlRequest);
+
+
 
   var startTime = Date.now();
 
-  var pageSource              = yield this.requestPageSource(self.currentUrlRequest.url,null,overriddenRequestConfig);
+  var pageSource = yield this.requestPageSource(self.currentUrlRequest.url,null,overriddenRequestConfig);
 
   var duration = Date.now() - startTime;
 
   logger.debug("request Time: " + duration + "ms");
 
   if(this.handleableURLPattern instanceof RegExp){
-    return yield self.scrap(pageSource);
+    return yield self.scrap(pageSource,self.currentUrlRequest);
   }else{
     for (var i = self.handleableURLPattern.length - 1; i >= 0; i--) {
       var patternMap = self.handleableURLPattern[i];
       if(patternMap.pattern.test(self.currentUrlRequest.url)){
         var scrapFunctionName = patternMap.scrapFunction;
 
-        return yield self[scrapFunctionName](pageSource);
+        return yield self[scrapFunctionName](pageSource,self.currentUrlRequest);
       }
     }
   }
@@ -93,12 +102,12 @@ AbstractScrapHandler.prototype.requestPageSource = co.wrap(function*(url, method
     agent : false
   };
 
-  if(this.domainConfig !== undefined || this.domainConfig !== null){
+  if(this.domainConfig !== undefined && this.domainConfig !== null){
     var domainRequestConfig = yield this.domainConfig.getRequestConfig(url);
     this.extendJSON(requestConfig,domainRequestConfig);
   }
 
-  if(overriddenRequestConfig !== undefined || overriddenRequestConfig !== null){
+  if(overriddenRequestConfig !== undefined && overriddenRequestConfig !== null){
     this.extendJSON(requestConfig,overriddenRequestConfig);
   }
 
@@ -176,23 +185,21 @@ AbstractScrapHandler.prototype.getJqueryPromise = co.wrap(function*(pageSource){
 
 //this will help filter all invalid non crawlable url, only valid url will be returned
 AbstractScrapHandler.prototype.hrefToCrawlableAbsoluteURL = function(anyHref){
+  var href = anyHref;
   // case if anyHref is undefined, null, etc...
-  if(!anyHref){
+  if(href){
       return undefined;
   }
   // case: href="  "
-  var isURLBlank =  /^\s*$/.test(anyHref);
+  var isURLBlank =  /^\s*$/.test(href);
   if(isURLBlank){
     return undefined;
   }
 
-  // case: href="#"
-  var isStartingWithHash = /^#.*/.test(anyHref);
-  if(isStartingWithHash){
-    return undefined;
-  }
+  // case: href="#", take out the hash value
+  href = href.replace(/#(?!.*#)(.+?)$/g,"");
 
-  return url.resolve(this.currentUrlRequest.url, anyHref);
+  return url.resolve(this.currentUrlRequest.url, href);
 };
 
 AbstractScrapHandler.prototype.getAllLinksContains = function($, string){
@@ -310,21 +317,171 @@ AbstractScrapHandler.prototype.__writeFile = co.wrap(function*(path,content){
   yield fs.writeFileAsync(path, content);
 });
 
+/**
+ * save content into 'scraped_content' folder
+ *
+ * @param {string} filename
+ * @param {string} content
+ * @return {Promise}
+ */
 AbstractScrapHandler.prototype.saveText = co.wrap(function*(filename,content){
   var filepath = path.join(config.root,"scraped_content",filename);
   yield this.__writeFile(filepath, content);
 });
 
-
+/**
+ * call trim() on every string or [string,...] in obj
+ *
+ * @param {string} obj
+ */
 AbstractScrapHandler.prototype.trimStringProperties = function(obj){
+  var self = this;
   if (null === obj || "object" != typeof obj) return obj;
   for (var attr in obj) {
         if (!obj.hasOwnProperty(attr)) continue;
-        if(typeof obj[attr] != 'string') continue;
-        obj[attr] = obj[attr].trim();
+
+        var prop = obj[attr];
+
+        if (Array.isArray(prop)){
+          for (var i = prop.length - 1; i >= 0; i--) {
+            var elm = prop[i];
+
+            if (typeof elm != 'string') continue;
+            prop[i] = elm.trim();
+          }
+        }
+
+        if (typeof prop != 'string') continue;
+        obj[attr] = prop.trim();
   }
 };
 
+/**
+ * call trim() on every string or [string,...] in obj recursively
+ *
+ * @param {string} obj
+ */
+AbstractScrapHandler.prototype.trimStringPropertiesRecursively = function(obj){
+  var self = this;
+  if (null === obj || "object" != typeof obj) return obj;
+  for (var attr in obj) {
+        if (!obj.hasOwnProperty(attr)) continue;
+
+        var prop = obj[attr];
+
+        if (typeof prop == 'object'){
+          self.trimStringPropertiesRecursively(prop);
+        }
+
+        if (Array.isArray(prop)){
+          for (var i = prop.length - 1; i >= 0; i--) {
+            var elm = prop[i];
+
+            if (typeof elm == 'object'){
+              self.trimStringPropertiesRecursively(elm);
+            }
+
+            if (typeof elm != 'string') continue;
+            prop[i] = elm.trim();
+          }
+        }
+
+        if (typeof prop != 'string') continue;
+        obj[attr] = prop.trim();
+  }
+};
+
+/**
+ * test.com/?c=a%20of%20b#2 => "c=a%20of%20b"
+ *
+ * @param {string} url
+ * @return {string|undefined}
+ */
+AbstractScrapHandler.prototype.extractQueryString = function(url){
+  var queryString = /\?(?!.*\?)([^#]+)/g.exec(url);
+  if(queryString === null){
+    return undefined;
+  }else{
+    return queryString[1];
+  }
+};
+
+/**
+ * test.com/?name=a%20b%20c => {name: "a b c"}
+ *
+ * @param {string} url
+ * @return {object|undefined}
+ */
+AbstractScrapHandler.prototype.QueryStringToObject = function(url){
+  // var urlParse = url.parse(url, true);
+  // if(Object.keys(urlParse.query).length === 0 ){
+  //   return undefined;
+  // }
+  // return urlParse.query;
+  var queryString = this.extractQueryString(url);
+  if(queryString === undefined){
+    return undefined;
+  }else{
+    return Qs.parse(queryString);
+  }
+};
+
+/**
+ * return currentUrlRequest's queryString object
+ *
+ * @return {object|undefined}
+ */
+AbstractScrapHandler.prototype.getCurrentUrlRequestQueryStringObject = function(){
+  return this.QueryStringToObject(this.currentUrlRequest.url);
+};
+
+/**
+ * {name: "a b c"} => "name=a%20b%20c"
+ *
+ * @param {string} url
+ * @return {string}
+ */
+AbstractScrapHandler.prototype.ObjectToQueryString = function(obj){
+  return Qs.stringify(obj);
+};
+
+/**
+ * test.com/#ab => "ab"
+ *
+ * @param {string} url
+ * @return {string|undefined}
+ */
+AbstractScrapHandler.prototype.getHashTagValue = function(url){
+  var res = /#(?!.*#)(.+?)$/g.exec(url);
+  if( res === null){
+    return undefined;
+  }else{
+    return res[1];
+  }
+};
+
+/**
+ * From Request doc: https://github.com/request/request#requestoptions-callback
+ * when passed an object or a querystring, this sets body to a querystring representation of value,
+ * and adds Content-type: application/x-www-form-urlencoded header.
+ *
+ * @param {object|string} object or query string as form body
+ */
+AbstractScrapHandler.prototype.buildFormRequestConfig = function(object){
+  return {
+      method : "POST",
+      form : object
+    };
+};
+
+/**
+ * var a = {a:1}, b = {b:1}
+ * extendJSON(a,b,...)
+ * a => {a:1,b:1}
+ *
+ * @param {object} targetObject
+ * @return {object} targetObject
+ */
 AbstractScrapHandler.prototype.extendJSON = function (target) {
     var sources = [].slice.call(arguments, 1);
 

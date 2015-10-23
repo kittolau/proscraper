@@ -6,15 +6,46 @@ global.rootRequire = function(name) {
 var os                = require("os");
 var process           = require('process');
 var cluster           = require('cluster');
+var CronJob           = require('cron').CronJob;
 var WebScraperProcess = rootRequire("web_scraper/web_scraper_process");
 var logger            = rootRequire('service/logger_manager');
 var config            = rootRequire('config');
+
+function setupCronJob(){
+  var job = new CronJob({
+    cronTime: '* * * * * *',
+    onTick: function() {
+      console.log("haha");
+    },
+    start: true,
+    timeZone: 'Hongkong'
+  });
+}
+
+function startUpProcess(workerProcess,pid,controllerCount,domainWhiteList){
+  workerProcess = new WebScraperProcess(
+    process.pid,
+    config.scraper.controller_count,
+    processDomain
+  );
+  workerProcess.applyProcessGlobalSetting();
+  workerProcess
+  .allocateController()
+  .then(function(){
+    workerProcess.up();
+  })
+  .catch(function(err){
+    logger.error(err);
+    logger.error(err.stack);
+  });
+}
 
 var main = function(){
 
   var domainWhitList = ["getproxy.jp",'spys.ru','gatherproxy.com','xroxy.com'];
 
   var workerProcess = null;
+
   process.on('SIGINT', function() {
       logger.warn("\nGracefully shutting down from SIGINT (Ctrl+C)");
       if(workerProcess !== null){
@@ -44,55 +75,64 @@ var main = function(){
         logger.log("A worker is now connected to " + address.address + ":" + address.port);
       });
 
-      cluster.on('exit', function(worker, code, signal) {
-          logger.warn('Worker ' + worker.process.pid + ' died with code: ' + code + ', and signal: ' + signal);
-          // logger.warn('Starting a new worker');
-          // cluster.fork();
+      //// kill worker
+      //cluster.worker.destroy()
+
+      cluster.on('exit', function(deadWorker, code, signal) {
+
+          // if (deadWorker.suicide === true) {
+          //   //will be called if cluster.worker.destroy()
+          //   console.log(new Date()+' Worker committed suicide');
+          //   cluster.fork();
+          // }
+
+          logger.warn('Worker ' + deadWorker.process.pid + ' died with code: ' + code + ', and signal: ' + signal);
+
+          var popIndex = null;
+          var pushWorker = null;
+
+          for (var i = workerList.length - 1; i >= 0; i--) {
+            var worker = workerList[i];
+            if(deadWorker === worker){
+              popIndex  = i;
+              logger.warn('Starting a new worker');
+              pushWorker = cluster.fork();
+              break;
+            }
+          }
+
+          if(popIndex === null || pushWorker === null){
+            logger.error("cannot find deadWorker in workerList, how come");
+          }
+
+          workerList.splice(popIndex, 1);
+          workerList.push(pushWorker);
       });
+
+      setupCronJob();
+
     } else {
 
       var workerId = process.env.WorkerId;
       var numberOfDomainProcess =  Math.floor( domainWhitList.length / numWorkers );
       var sliceStartingIndex = workerId  * numberOfDomainProcess;
       var sliceEndIndex = sliceStartingIndex + numberOfDomainProcess;
-
       var processDomain = domainWhitList.slice(sliceStartingIndex, sliceEndIndex);
 
-      workerProcess = new WebScraperProcess(
+      startUpProcess(
+        workerProcess,
         process.pid,
         config.scraper.controller_count,
         processDomain
       );
-      workerProcess.applyProcessGlobalSetting();
-      workerProcess
-      .allocateController()
-      .then(function(){
-        workerProcess.up();
-      })
-      .catch(function(err){
-        logger.error(err);
-        logger.error(err.stack);
-      });
-
     }
   }else{
-
-    workerProcess = new WebScraperProcess(
+    startUpProcess(
+      workerProcess,
       process.pid,
       config.scraper.controller_count,
       domainWhitList
     );
-    workerProcess.applyProcessGlobalSetting();
-    workerProcess
-    .allocateController()
-    .then(function(){
-      workerProcess.up();
-    })
-    .catch(function(err){
-      logger.error(err);
-      logger.error(err.stack);
-    });
-
   }
 };
 

@@ -97,6 +97,8 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
   var loader = self.domainConfigLoader;
   var maxAllocatableController = self.numberOfController;
 
+  logger.debug("process "+self.pid+" has "+ maxAllocatableController+ " qouta to allocate");
+
   yield loader.checkDomainNameIdentifierDuplicate();
 
   var requiredAllocationList = yield loader.getControllerAllocationList();
@@ -113,6 +115,8 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
     if(allocationWhiteList.indexOf(domainId) == -1){
       continue;
     }
+
+    logger.debug("process "+self.pid+" allocating "+ numberOfRequiredController + " for "+ domainId);
 
     var domainConfigDetail = yield self.domainConfigLoader.findDomainConfigDetail(domainId);
 
@@ -140,6 +144,7 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
   }
   self.allocatedList = allocatedList;
   logger.debug("Web Scraper Process allocation:\n " + self.__getAllocationReportString(allocatedList));
+  logger.debug("Web Scraper Process allocation qouta left:\n " + (maxAllocatableController - totalAllocatedCount));
 });
 
 WebScraperProcess.prototype.onSeriousError = function(err){
@@ -161,6 +166,9 @@ WebScraperProcess.prototype.applyProcessGlobalSetting = function(){
 };
 
 WebScraperProcess.prototype.up = function(){
+
+
+
     for (var i = this.controllerStatusList.length - 1; i >= 0; i--) {
       var controllerStatus = this.controllerStatusList[i];
       controllerStatus.controller.up();

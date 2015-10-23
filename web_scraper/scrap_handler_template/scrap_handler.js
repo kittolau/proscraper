@@ -38,6 +38,26 @@ inherits(ScrapHandler, AbstractScrapHandler);
 //   var $ = yield self.getCheerioPromise(pageSource);
 // });
 
+// ScrapHandler.prototype.getOverriddenRequestConfigBeforeRequest = function(currentUrlRequest){
+//   var self = this;
+
+//   if( !currentUrlRequest.isPayloadExist("PageIdx") || !currentUrlRequest.isPayloadExist("Country")){
+//     var queryStringObj = self.QueryStringToObject(currentUrlRequest.url);
+//     country = queryStringObj.c.toLowerCase();
+//     currentUrlRequest.setPayload("Country", country);
+//     currentUrlRequest.setPayload("PageIdx", 1);
+//   }
+//   var country =currentUrlRequest.getPayload("Country");
+//   var pageIdx = currentUrlRequest.getPayload("PageIdx");
+
+//   if(/any-scrap\.com\/proxylist\/country\/\?c=.+/g.test(currentUrlRequest.url)){
+//     var formBody = {
+//       Country: country,
+//       PageIdx: pageIdx
+//     };
+//     return self.buildFormRequestConfig(formBody);
+//   }
+// };
 
 ScrapHandler.prototype.getHandleableURLPattern = function (){
   return /whatever-you-want\.com\/en\/(?:default\/\d+|$)/g;

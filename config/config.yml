@@ -14,10 +14,10 @@ development:
     #Number of chance given to a failed job
     retry_count: 0
     #Maximum global socket per process
-    globalMaxSockets: 4
+    globalMaxSockets: 2
     default_request_timeout_seconds: 5
     #Number of WebScraperController per process
-    controller_count: 16
+    controller_count: 20
     #cluster_mode = 0:
     #  there will be only one WebScraperProcess
     #cluster_mode = 1:
@@ -27,9 +27,9 @@ development:
     <<: *logger
     file_log:
       filename: debug_log.log
-      level: INFO
+      level: DEBUG
     stdout_log:
-      level: INFO
+      level: DEBUG
   selenium:
     type: remote
     remote_server_path: http://192.168.33.1:4444/wd/hub

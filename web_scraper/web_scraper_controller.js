@@ -138,10 +138,10 @@ WebScraperController.prototype.up = function (){
             yield handler
             .handle()
             .catch(self.onHandlerError
-            .bind({
-              urlRequest:urlRequest,
-              beanstalkdClient:self.beanstalkdClient
-            })
+              .bind({
+                urlRequest:urlRequest,
+                beanstalkdClient:self.beanstalkdClient
+              })
             );
 
             var duration = Date.now() - startTime;
