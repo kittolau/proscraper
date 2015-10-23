@@ -106,6 +106,7 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
   var allocatedList          = [];
 
   var totalAllocatedCount = 0;
+
   for (var i = requiredAllocationList.length - 1; i >= 0; i--) {
     var requiredAllocation = requiredAllocationList[i];
 
@@ -116,9 +117,12 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
       continue;
     }
 
+
     logger.debug("process "+self.pid+" allocating "+ numberOfRequiredController + " for "+ domainId);
 
+
     var domainConfigDetail = yield self.domainConfigLoader.findDomainConfigDetail(domainId);
+
 
     allocatedList.push(requiredAllocation);
     totalAllocatedCount += numberOfRequiredController;
@@ -166,8 +170,6 @@ WebScraperProcess.prototype.applyProcessGlobalSetting = function(){
 };
 
 WebScraperProcess.prototype.up = function(){
-
-
 
     for (var i = this.controllerStatusList.length - 1; i >= 0; i--) {
       var controllerStatus = this.controllerStatusList[i];

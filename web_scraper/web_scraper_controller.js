@@ -1,10 +1,10 @@
 /* jshint node: true, esnext:true */
 'use strict';
 var http               = require('http');
-var Promise            = require('bluebird');
 var os                 = require("os");
 var cluster            = require('cluster');
 var co                 = require('co');
+var Promise            = require('bluebird');
 var ScrapHandlerLoader = rootRequire("web_scraper/scrap_handler_loader");
 var URLRequest         = rootRequire('web_scraper/url_request');
 var logger             = rootRequire('service/logger_manager');
@@ -121,8 +121,8 @@ WebScraperController.prototype.up = function (){
     co(function *(){
         while(!self.isStopped){
 
-
             var urlRequest = yield self.beanstalkdClient.consumeURLRequest();
+
             var services   = self.services;
 
             var startTime = Date.now();

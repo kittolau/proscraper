@@ -121,9 +121,10 @@ BeanstalkdManager.prototype.consumeURLRequestWithTimeout = function (seconds){
   return this.__consumeJob_with_timeout(seconds).then(URLRequest.prototype.__createNew);
 };
 
-BeanstalkdManager.prototype.consumeURLRequest = function (){
-  return this.__consumeJob().then(URLRequest.prototype.__createNew);
-};
+BeanstalkdManager.prototype.consumeURLRequest = co.wrap(function *(){
+
+  return yield this.__consumeJob().then(URLRequest.prototype.__createNew);
+});
 
 //return undefined if timeout, also, err will be 'Error: TIMED_OUT'
 BeanstalkdManager.prototype.__consumeJob_with_timeout = co.wrap(function*(seconds){
@@ -144,7 +145,12 @@ BeanstalkdManager.prototype.__consumeJob_with_timeout = co.wrap(function*(second
 });
 
 BeanstalkdManager.prototype.__consumeJob = co.wrap(function*(){
+
+
+
   var client = yield this.watchClientPromise;
+
+  //throw new Error("tttttttttttttttttt222222222222")
 
   var job = yield client.reserveAsync();
   logger.debug("Reserved job #" + job[0]);
@@ -172,7 +178,7 @@ BeanstalkdManager.prototype.__watchTube = function(client, tubeName){
   return client
   .watchAsync(tubeName) // the tubes which .reserve() is subscribed to
   .then(function(retTubeNumber) {
-    logger.debug("Watching tube: '" + tubeName + "')");
+    logger.debug("Watching tube: '" + tubeName + "'");
   });
 };
 
@@ -202,17 +208,26 @@ BeanstalkdManager.prototype.__buildConnectionClientPromise = function(host, port
   });
 };
 
-BeanstalkdManager.prototype.__buildWatchClientPromise = co.wrap(function* (host, port, watchTubeArray){
+BeanstalkdManager.prototype.__buildWatchClientPromise = function (host, port, watchTubeArray){
   var self = this;
-  var connectedClient = yield this.__buildConnectionClientPromise(host, port);
 
-  for (var i = watchTubeArray.length - 1; i >= 0; i--) {
-    var tubeName = watchTubeArray[i];
-    yield self.__watchTube(connectedClient,tubeName);
-  }
-
-  return connectedClient;
-});
+  return new Promise(function(resolve, reject){
+    var connectedClient = self.__buildConnectionClientPromise(host, port);
+    connectedClient
+    .then(function(conn){
+      var q = [];
+      for (var i = watchTubeArray.length - 1; i >= 0; i--) {
+        var tubeName = watchTubeArray[i];
+        q.push(self.__watchTube(conn,tubeName));
+      }
+      return Promise.all(q);
+    })
+    .then(function(){
+      console.log("resolved connection!!!!!!")
+      resolve(connectedClient);
+    });
+  });
+};
 
 BeanstalkdManager.prototype.__buildUseClientPromise = co.wrap(function* (host, port, useTubeArray){
   var self = this;

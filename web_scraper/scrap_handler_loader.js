@@ -14,32 +14,34 @@ var AbstractScrapHandler = rootRequire('web_scraper/abstract_scrap_handler');
 function ScrapHandlerLoader() {
   Loader.call(this);
 
-  this.scrapHandlers = this.__bliudScrapHandlersPromise();
+  this.scrapHandlers = this.__bliudScrapHandlers();
 }
 inherits(ScrapHandlerLoader, Loader);
 
-ScrapHandlerLoader.prototype.__bliudScrapHandlersPromise = co.wrap(function* (){
+ScrapHandlerLoader.prototype.__bliudScrapHandlers = function (){
   var self = this;
-  var handlers = [];
 
-  var handlersDir = path.join(__dirname, "scrap_handler");
-  var files = yield this.recursiveGetfile(handlersDir);
-  yield files.map(function(scrapHandlerPath){
-    return fs
-    .readFileAsync(scrapHandlerPath)
-    .then(function(sourceCode){
+  return new Promise(function(resolve,reject){
+    var handlers = [];
+
+    var handlersDir = path.join(__dirname, "scrap_handler");
+    var files = self.recursiveGetfile(handlersDir);
+
+    for (var i = files.length - 1; i >= 0; i--) {
+      var scrapHandlerPath = files[i];
+
+      var sourceCode = fs.readFileSync(scrapHandlerPath);
       var err = check(sourceCode, scrapHandlerPath);
       if (err) {
         console.log(err);
         throw new Error("syntax error detected while importing " + scrapHandlerPath);
       }
-    })
-    .then(function(){
+
       var HandlerClass         = require(scrapHandlerPath);
       var isAbstractScrapHandlerSubclass = HandlerClass.prototype instanceof AbstractScrapHandler;
       if(!isAbstractScrapHandlerSubclass){
         //skip
-        return;
+        continue;
       }
 
       var urlPattern           = HandlerClass.prototype.getHandleableURLPattern();
@@ -81,11 +83,12 @@ ScrapHandlerLoader.prototype.__bliudScrapHandlersPromise = co.wrap(function* (){
       }
 
       logger.debug("Handler loaded: " + scrapHandlerPath);
-    });
-  });
 
-  return handlers;
-});
+    }
+
+    return resolve(handlers);
+  });
+};
 
 ScrapHandlerLoader.prototype.getHandlerClassFor = co.wrap(function* (url){
   var self = this;

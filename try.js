@@ -12,8 +12,8 @@ var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
 
 var main = function(){
 
-  var SEED_URL = "http://www.google.com/";
-  var DOMAIN_ID = 'google.com';
+  var SEED_URL = "http://www.gatherproxy.com/proxylist/country/?c=Hong%20Kong";
+  var DOMAIN_ID = 'gatherproxy.com';
 
   var workerProcess = null;
 
@@ -46,13 +46,15 @@ var main = function(){
     logger.error(err.stack);
   });
 
-  var seedQueueClient = new BeanstalkdManager(config.beanstalkd, DOMAIN_ID);
-  var urlRequest = new URLRequest(SEED_URL);
-  seedQueueClient
-  .putURLRequest(urlRequest)
-  .then(function(){
-    seedQueueClient.close();
-  });
+  //DONT USE THE SAME PROCESS TO SEED JOB, OTHER WISE the err stack is some how corrupted
+
+  // var seedQueueClient = new BeanstalkdManager(config.beanstalkd, DOMAIN_ID);
+  // var urlRequest = new URLRequest(SEED_URL);
+  // seedQueueClient
+  // .putURLRequest(urlRequest)
+  // .then(function(){
+  //   seedQueueClient.close();
+  // });
 
 
 };

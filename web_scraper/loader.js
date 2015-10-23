@@ -8,34 +8,28 @@ var logger     = rootRequire('service/logger_manager');
 
 function Loader() {}
 
-Loader.prototype.recursiveGetfile = co.wrap(function* (directoryName){
+Loader.prototype.recursiveGetfile = function (directoryName){
   var paths = [];
-  yield this.__recursiveGetfile(directoryName,paths);
+  this.__recursiveGetfile(directoryName,paths);
   return paths;
-});
+};
 
 Loader.prototype.__recursiveGetfile = function(directoryName, paths) {
   var self = this;
 
-  return fs
-  .readdirAsync(directoryName)
-  .map(function(file){
+  var files = fs.readdirSync(directoryName);
+  for (var i = files.length - 1; i >= 0; i--) {
+    var file = files[i];
     var fullPath   = path.join(directoryName,file);
-    var resPromise = fs
-    .statAsync(fullPath)
-    .then(function(f) {
-      if (f.isDirectory()) {
-        return self.__recursiveGetfile(fullPath,paths);
-      }
-      paths.push(fullPath);
-    })
-    .catch(function(err){
-      logger.error('Error: ', err);
-      process.exit(1);
-    });
 
-    return resPromise;
-  });
+    var f = fs.statSync(fullPath);
+    if (f.isDirectory()) {
+      self.__recursiveGetfile(fullPath,paths);
+    }else{
+      paths.push(fullPath);
+    }
+  }
+  return;
 };
 
 module.exports = Loader;

@@ -14,47 +14,59 @@ var AbstractDomainConfig = rootRequire('web_scraper/abstract_domain_config');
 
 function DomainConfigLoader() {
   Loader.call(this);
+
+  var self = this;
+
   this.domainConfigArray = this.__buildddomainConfigArray();
   //check integrity immediate after this.domainConfigArray is ready
 }
 inherits(DomainConfigLoader, Loader);
 
-DomainConfigLoader.prototype.__buildddomainConfigArray = co.wrap(function* (){
+DomainConfigLoader.prototype.__buildddomainConfigArray = function (){
   var self = this;
-  var domainConfigArray = [];
+  return new Promise(function(resolve,reject){
 
-  var handlersDir = path.join(__dirname, "scrap_handler");
-  var files = yield this.recursiveGetfile(handlersDir);
+    var domainConfigArray = [];
 
-  yield files.map(function(filePath){
-    return fs
-    .readFileAsync(filePath)
-    .then(function(sourceCode){
+    var handlersDir = path.join(__dirname, "scrap_handler");
+
+    var files = self.recursiveGetfile(handlersDir);
+
+
+    for (var i = files.length - 1; i >= 0; i--) {
+      var filePath = files[i];
+
+
+      var sourceCode = fs.readFileSync(filePath);
+
+
       var err = check(sourceCode, filePath);
       if (err) {
         console.log(err);
         throw new Error("syntax error detected while importing " + filePath);
       }
-    })
-    .then(function(){
+
+
       var DomainConfigClass = require(filePath);
+
       var isAbstractDomainConfigSubclass = DomainConfigClass.prototype instanceof AbstractDomainConfig;
       if(!isAbstractDomainConfigSubclass){
         //skip
-        return;
+        continue;
       }
       domainConfigArray.push(new DomainConfigClass());
 
       logger.debug("Agent config loaded: " + filePath);
-    });
+    }
+
+    logger.debug("Agent config Loaded Completely");
+
+    return resolve(domainConfigArray);
   });
-
-  logger.debug("Agent config Loaded Completely");
-
-  return domainConfigArray;
-});
+};
 
 DomainConfigLoader.prototype.checkDomainNameIdentifierDuplicate =  co.wrap(function*(){
+
   var allocationList = yield this.getControllerAllocationList();
 
   var sorted_arr = allocationList.sort(function(a, b){
@@ -79,6 +91,9 @@ DomainConfigLoader.prototype.findDomainConfigDetail = co.wrap(function*(domainNa
   var self = this;
 
   var domainConfigArray = yield self.domainConfigArray;
+
+
+
 
   for (var i = 0, len = domainConfigArray.length; i < len; i++) {
     var domainConfig = domainConfigArray[i];

@@ -26,9 +26,9 @@ function AbstractScrapHandler(urlRequest, services, domainConfig) {
 
   //prepate for this._seenURL
   if(urlRequest.isPayloadExist("_seenURLBuckets")){
-  this._seenURL             = new BloomFilter(urlRequest.getPayload("_seenURLBuckets"), 3);
+    this._seenURL             = new BloomFilter(urlRequest.getPayload("_seenURLBuckets"), 3);
   }else{
-  this._seenURL             = new BloomFilter(8192, 16);
+    this._seenURL             = new BloomFilter(8192, 16);
   }
 
   this._seenURL.add(urlRequest.url);
@@ -55,12 +55,7 @@ AbstractScrapHandler.prototype.getOverriddenRequestConfigBeforeRequest = functio
 
 //if you like you can override it
 AbstractScrapHandler.prototype.handle = co.wrap(function* (){
-  try{
-    console.trace("aa")
-    throw new Error("test")
-  }catch(err){
-    throw err;
-  }
+
   var self = this;
 
   var overriddenRequestConfig = self.getOverriddenRequestConfigBeforeRequest(self.currentUrlRequest);
