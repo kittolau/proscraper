@@ -12,7 +12,7 @@ var URLRequestSeeder  = rootRequire("web_scraper/url_request_seeder");
 var WebScraperProcess = rootRequire("web_scraper/web_scraper_process");
 var BeanstalkdManager = rootRequire("service/beanstalkd_manager");
 
-var DOMAIN_ID = "getproxy.jp";
+var DOMAIN_ID = ["getproxy.jp",'gatherproxy.com','xroxy.com'];
 
 var main = function(){
 
@@ -36,7 +36,7 @@ var main = function(){
   workerProcess = new WebScraperProcess(
     process.pid,
     config.scraper.controller_count,
-    [DOMAIN_ID]
+    DOMAIN_ID
   );
   workerProcess.applyProcessGlobalSetting();
   workerProcess

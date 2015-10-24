@@ -63,11 +63,38 @@ ScrapHandler.prototype.getHandleableURLPattern = function (){
   return /whatever-you-want\.com\/en\/(?:default\/\d+|$)/g;
 };
 
-//test the code in chrome first
-ScrapHandler.prototype.scrap = co.wrap(function*(pageSource){
+//test the code in chrome first, you may inject jquery where the page has no jquery
+
+// var jq = document.createElement('script');
+// jq.src = "//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js";
+// document.getElementsByTagName('head')[0].appendChild(jq);
+// // ... give time for script to load, then type.
+// jQuery.noConflict();
+
+ScrapHandler.prototype.scrap = co.wrap(function*(pageSource,currentUrlRequest,domainConfig,domainConfigDetail){
   var self = this;
   var blockingPromises = [];
   var $ = yield self.getCheerioPromise(pageSource);
+
+  // self.getAllLinksContains($,string)
+
+  // self.tryCrawlWithDepthReset(href,payload,checkBloomFilter)
+  // self.tryCrawlWithDepth(href,payload,checkBloomFilter)
+  // self.tryCrawl(href,payload,checkBloomFilter)
+  // self.crawl(href,payload,checkBloomFilter)
+
+  // self.saveText(filename,content)
+
+  // self.trimStringProperties(obj)
+  // self.trimStringPropertiesRecursively(obj)
+
+  // self.getCurrentUrlRequestQueryStringObject()
+  // self.QueryStringToObject(url)
+  // self.ObjectToQueryString(obj)
+  // self.getHashTagValue(url)
+
+  // currentUrlRequest.setPayload(key,value)
+  // currentUrlRequest.setPayload(key)
 
   //get all the links
   var allDomainLink = self.getAllLinksContains($, "whatever-you-want.com");

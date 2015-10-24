@@ -14,7 +14,7 @@ development:
     #Number of chance given to a failed job
     retry_count: 0
     #Maximum global socket per process
-    globalMaxSockets: 4
+    globalMaxSockets: 6
     default_request_timeout_seconds: 5
     #Number of WebScraperController per process
     controller_count: 20
@@ -48,7 +48,7 @@ production:
     #Number of chance given to a failed job
     retry_count: 3
     #Maximum global socket per process
-    globalMaxSockets: 4
+    globalMaxSockets: 6
     default_request_timeout_seconds: 5
     #Number of WebScraperController per process
     controller_count: 30
@@ -60,7 +60,7 @@ production:
   logger:
     <<: *logger
     file_log:
-      filename: debug_log.log
+      filename: productin_log.log
       level: WARN
     stdout_log:
       level: WARN

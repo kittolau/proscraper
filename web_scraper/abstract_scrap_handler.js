@@ -272,9 +272,6 @@ AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBl
     return;
   }
 
-  console.log(this.currentUrlRequest.depthLevel);
-  console.log(this.domainConfigDetail.maximunDepthLevel);
-
   if(this.domainConfigDetail.maximunDepthLevel !== null){
     if(this.currentUrlRequest.depthLevel >= this.domainConfigDetail.maximunDepthLevel ){
      logger.warn("maximun depth reached");
@@ -421,6 +418,27 @@ AbstractScrapHandler.prototype.extractQueryString = function(url){
   }
 };
 
+AbstractScrapHandler.prototype.extractAwayQueryString = function(url){
+  var extractedURL = /(.+)\?/g.exec(url);
+  if(extractedURL === null){
+    return undefined;
+  }else{
+    return extractedURL[1];
+  }
+};
+
+AbstractScrapHandler.prototype.overrideQueryString = function(url,dictionary){
+  var urlOnly = this.extractAwayQueryString(url);
+  if(urlOnly === undefined){
+    return undefined;
+  }
+
+  var queryString = this.QueryStringToObject(url);
+  this.extendJSON(queryString,dictionary);
+  var newURL = urlOnly + "?" + this.ObjectToQueryString(queryString);
+  return newURL;
+};
+
 /**
  * test.com/?name=a%20b%20c => {name: "a b c"}
  *
@@ -503,6 +521,9 @@ AbstractScrapHandler.prototype.extendJSON = function (target) {
     for (var i = sources.length - 1; i >= 0; i--) {
       var source = sources[i];
       for (var prop in source) {
+            // if(source.hasOwnProperty(prop)){
+            //   logger.debug(target.constructor.name + "."+prop+"="+target[prop]+" will be override by " + source.constructor.name + "." + prop +"="+source[prop]);
+            // }
             target[prop] = source[prop];
         }
     }

@@ -205,8 +205,8 @@ var async              = require('async');
 var url = require('url')
 var Qs  = require('qs')
 
-var urls="http://www.gatherproxy.com/proxylist/country/?c=Republic%20of%20Korea#2"
-var urlParse = url.resolve(urls, null);
+var urls="http://www.gatherproxy.com/proxylist/country/awfw.php?c=Republic%20of%20Korea#2"
+var urlParse = url.resolve(urls, "c=Hong%20Kong&d=2");
 console.log(urlParse)
 
 // console.log(urlParse.hash)

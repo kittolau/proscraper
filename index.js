@@ -12,14 +12,14 @@ var logger            = rootRequire('service/logger_manager');
 var config            = rootRequire('config');
 
 function setupCronJob(){
-  var job = new CronJob({
-    cronTime: '* * * * * *',
-    onTick: function() {
-      console.log("haha");
-    },
-    start: true,
-    timeZone: 'Hongkong'
-  });
+  // var job = new CronJob({
+  //   cronTime: '* * * * * *',
+  //   onTick: function() {
+  //     console.log("haha");
+  //   },
+  //   start: true,
+  //   timeZone: 'Hongkong'
+  // });
 }
 
 function startUpProcess(workerProcess,pid,controllerCount,domainWhiteList){
@@ -42,7 +42,7 @@ function startUpProcess(workerProcess,pid,controllerCount,domainWhiteList){
 
 var main = function(){
 
-  var domainWhitList = ["getproxy.jp",'spys.ru','gatherproxy.com','xroxy.com'];
+  var domainWhitList = ["getproxy.jp",'gatherproxy.com','xroxy.com'];
 
   var workerProcess = null;
 
@@ -133,6 +133,8 @@ var main = function(){
       config.scraper.controller_count,
       domainWhitList
     );
+
+    setupCronJob();
   }
 };
 

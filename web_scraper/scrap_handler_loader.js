@@ -33,7 +33,6 @@ ScrapHandlerLoader.prototype.__bliudScrapHandlers = function (){
       var sourceCode = fs.readFileSync(scrapHandlerPath);
       var err = check(sourceCode, scrapHandlerPath);
       if (err) {
-        console.log(err);
         throw new Error("syntax error detected while importing " + scrapHandlerPath);
       }
 

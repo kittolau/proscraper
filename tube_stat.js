@@ -12,12 +12,18 @@ var config            = rootRequire('config');
 
 var main = function(){
 
+  var allDomainId = ["getproxy.jp",'gatherproxy.com','xroxy.com'];
+
   function clearConsole(){
     console.log('\033[2J');
   }
 
   var allTube = [];
-  allTube.push(new BeanstalkdManager(config.beanstalkd,'yourTubename.jp'));
+  for (var i = allDomainId.length - 1; i >= 0; i--) {
+    var tube = allDomainId[i];
+    allTube.push(new BeanstalkdManager(config.beanstalkd,tube));
+  }
+
 
   var startTime = Date.now();
 

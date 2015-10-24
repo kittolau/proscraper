@@ -125,6 +125,7 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
     totalAllocatedCount += numberOfRequiredController;
 
     if(totalAllocatedCount > maxAllocatableController){
+
       throw new Error("White listed domain exceed the maximun "+ maxAllocatableController +" of controller:\n" + self.__getAllocationReportString(allocatedList));
     }
 
