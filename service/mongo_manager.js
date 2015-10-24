@@ -24,6 +24,27 @@ MongeManager.prototype.getDB = function (){
 	return this.dbObject;
 };
 
+MongeManager.prototype.upsert = function(collection, key, data){
+  var self = this;
+
+  logger.debug("Upsert: ");
+  logger.debug(arguments);
+
+  return this
+  .getPromisifiedCollection(collection)
+  .updateAsync(
+    key,
+    {
+      $currentDate :{
+        update_at: true,
+        "scraper_update_at": { $type: "timestamp" }
+      },
+      $set: data
+    },
+    {upsert:true}
+  );
+};
+
 MongeManager.prototype.getPromisifiedCollection = function(collection_name){
 	var db = this.getDB();
 	var collection = db.collection(collection_name, {strict: true});

@@ -2,3 +2,5 @@
 /log/**/*
 /scraped_content/**/*
 /web_scraper/scrap_handler/**/*
+*.sublime-project
+*.sublime-workspace

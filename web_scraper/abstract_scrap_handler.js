@@ -60,8 +60,6 @@ AbstractScrapHandler.prototype.handle = co.wrap(function* (){
 
   var overriddenRequestConfig = self.getOverriddenRequestConfigBeforeRequest(self.currentUrlRequest);
 
-
-
   var startTime = Date.now();
 
   var pageSource = yield this.requestPageSource(self.currentUrlRequest.url,null,overriddenRequestConfig);
@@ -71,14 +69,14 @@ AbstractScrapHandler.prototype.handle = co.wrap(function* (){
   logger.debug("request Time: " + duration + "ms");
 
   if(this.handleableURLPattern instanceof RegExp){
-    return yield self.scrap(pageSource,self.currentUrlRequest);
+    return yield self.scrap(pageSource, self.currentUrlRequest, self.domainConfig, self.domainConfigDetail);
   }else{
     for (var i = self.handleableURLPattern.length - 1; i >= 0; i--) {
       var patternMap = self.handleableURLPattern[i];
       if(patternMap.pattern.test(self.currentUrlRequest.url)){
         var scrapFunctionName = patternMap.scrapFunction;
 
-        return yield self[scrapFunctionName](pageSource,self.currentUrlRequest);
+        return yield self[scrapFunctionName](pageSource, self.currentUrlRequest, self.domainConfig, self.domainConfigDetail);
       }
     }
   }
@@ -110,6 +108,9 @@ AbstractScrapHandler.prototype.requestPageSource = co.wrap(function*(url, method
   if(this.domainConfig.onRequestStart !== undefined){
     this.domainConfig.onRequestStart(url,method,overriddenRequestConfig);
   }
+
+  logger.debug("request:\n" + url);
+  logger.debug(requestConfig);
 
   var result = yield request(requestConfig)
   .catch(function(err){
@@ -182,7 +183,7 @@ AbstractScrapHandler.prototype.getJqueryPromise = co.wrap(function*(pageSource){
 AbstractScrapHandler.prototype.hrefToCrawlableAbsoluteURL = function(anyHref){
   var href = anyHref;
   // case if anyHref is undefined, null, etc...
-  if(href){
+  if(!href){
       return undefined;
   }
   // case: href="  "
@@ -193,6 +194,8 @@ AbstractScrapHandler.prototype.hrefToCrawlableAbsoluteURL = function(anyHref){
 
   // case: href="#", take out the hash value
   href = href.replace(/#(?!.*#)(.+?)$/g,"");
+
+
 
   return url.resolve(this.currentUrlRequest.url, href);
 };
@@ -211,11 +214,18 @@ AbstractScrapHandler.prototype.getAllLinksContains = function($, string){
     }
   });
 
+  logger.debug("found links contains " + string + ": ");
+  logger.debug(res);
+
   return res;
 };
 
 AbstractScrapHandler.prototype.tryCrawlWithDepthReset = co.wrap(function*(href,payload,checkBloomFilter){
-  checkBloomFilter = checkBloomFilter || true;
+if(checkBloomFilter === undefined || checkBloomFilter === null || checkBloomFilter){
+    checkBloomFilter = false;
+  }
+
+  logger.debug("try crawl with depth reset: " + href);
 
   var absolutePath = this.hrefToCrawlableAbsoluteURL(href);
   if(!absolutePath){
@@ -227,7 +237,11 @@ AbstractScrapHandler.prototype.tryCrawlWithDepthReset = co.wrap(function*(href,p
 });
 
 AbstractScrapHandler.prototype.tryCrawlWithDepth = co.wrap(function*(href,payload,checkBloomFilter){
-  checkBloomFilter = checkBloomFilter || true;
+if(checkBloomFilter === undefined || checkBloomFilter === null || checkBloomFilter){
+    checkBloomFilter = false;
+  }
+
+  logger.debug("try crawl with depth: " + href);
 
   var absolutePath = this.hrefToCrawlableAbsoluteURL(href);
   if(!absolutePath){
@@ -246,7 +260,11 @@ AbstractScrapHandler.prototype.tryCrawlWithDepth = co.wrap(function*(href,payloa
 });
 
 AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBloomFilter){
-  checkBloomFilter = checkBloomFilter || true;
+  if(checkBloomFilter === undefined || checkBloomFilter === null || checkBloomFilter){
+    checkBloomFilter = false;
+  }
+
+  logger.debug("try crawl: " + href);
 
   var absolutePath = this.hrefToCrawlableAbsoluteURL(href);
   if(!absolutePath){
@@ -271,6 +289,8 @@ AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBl
 //if you are sure href must exist
 AbstractScrapHandler.prototype.crawl = co.wrap(function*(href,payload,checkBloomFilter){
   checkBloomFilter = checkBloomFilter || true;
+
+  logger.debug("crawl: " + href);
 
   var absolutePath = this.hrefToCrawlableAbsoluteURL(href);
   if(!absolutePath){

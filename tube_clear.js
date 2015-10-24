@@ -11,13 +11,22 @@ var config            = rootRequire('config');
 
 var main = function(){
 
-    var DOMAIN_ID = 'yourTubename.com';
+    var DOMAIN_ID = 'gatherproxy.com';
 
     var seedQueueClient = new BeanstalkdManager(config.beanstalkd,DOMAIN_ID);
     co(function *(){
       while(true){
-        yield seedQueueClient.consumeURLRequest();
+        var job = yield seedQueueClient.consumeURLRequestWithTimeout(1);
+
+        console.log(job)
+
+        if(!job){
+          break;
+        }
       }
+
+      console.log('aaaaaaa')
+
     }).catch(logger.error);
 
 };

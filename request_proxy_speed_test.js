@@ -5,16 +5,18 @@ var Promise = require('bluebird');
 var request = Promise.promisify(require('request'));
 
 //test param
-var httpProxy = 'http://127.0.0.1:3128';
+var host      = "223.19.196.232";
+var port      = "80"
+var httpProxy = 'http://' + host + ":"+port;
 var httpAgent = new HttpProxyAgent(httpProxy);
-var httpsProxy = 'http://127.0.0.1:3128';
+var httpsProxy = 'https://' + host + ":"+port;
 var httpsAgent = new HttpsProxyAgent(httpsProxy);
 httpAgent.maxSockets  = 20;
 httpsAgent.maxSockets = 20;
 var connectionCount   = 20;
 var timeout           = 10000;
 var requestConfig     = {
-  url : "https://github.com/kittolau",
+  url : "https://www.google.com.hk",
   method : "GET",
   agent :  httpAgent,
   followRedirect : true,

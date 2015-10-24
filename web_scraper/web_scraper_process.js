@@ -117,12 +117,9 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
       continue;
     }
 
-
     logger.debug("process "+self.pid+" allocating "+ numberOfRequiredController + " for "+ domainId);
 
-
     var domainConfigDetail = yield self.domainConfigLoader.findDomainConfigDetail(domainId);
-
 
     allocatedList.push(requiredAllocation);
     totalAllocatedCount += numberOfRequiredController;
@@ -140,6 +137,7 @@ WebScraperProcess.prototype.allocateController = co.wrap(function*(){
       );
       var controllerStatus = {
         domainId : domainId,
+        domainConfigDetail : domainConfigDetail,
         controller:controller,
         isUP : 0
       };
@@ -184,6 +182,17 @@ WebScraperProcess.prototype.down = function(){
       controllerStatus.controller.down();
   }
   process.exit(0);
+};
+
+WebScraperProcess.prototype.seedURLRequest = function(domainNameIdentifier){
+  for (var i = this.controllerStatusList.length - 1; i >= 0; i--) {
+    var controllerStatus = this.controllerStatusList[i];
+    var domainConfigDetail = controllerStatus.domainConfigDetail;
+
+    if(domainConfigDetail.domainNameIdentifier == domainNameIdentifier || domainNameIdentifier === undefined){
+      domainConfigDetail.lazySeedURLRequest();
+    }
+  }
 };
 
 module.exports = WebScraperProcess;

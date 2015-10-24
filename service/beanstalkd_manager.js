@@ -191,7 +191,6 @@ BeanstalkdManager.prototype.__buildConnectionClientPromise = function(host, port
     .on('connect', function()
     {
         // client can now be used
-        logger.debug("Beanstalkd connection up");
         resolve(client);
     })
     .on('error', function(err)
@@ -223,7 +222,6 @@ BeanstalkdManager.prototype.__buildWatchClientPromise = function (host, port, wa
       return Promise.all(q);
     })
     .then(function(){
-      console.log("resolved connection!!!!!!")
       resolve(connectedClient);
     });
   });

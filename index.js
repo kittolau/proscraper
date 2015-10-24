@@ -26,7 +26,7 @@ function startUpProcess(workerProcess,pid,controllerCount,domainWhiteList){
   workerProcess = new WebScraperProcess(
     process.pid,
     config.scraper.controller_count,
-    processDomain
+    domainWhiteList
   );
   workerProcess.applyProcessGlobalSetting();
   workerProcess

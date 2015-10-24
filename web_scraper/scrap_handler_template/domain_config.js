@@ -13,19 +13,24 @@ function DomainConfig() {
 
   //copy and edit
   aProxyConfigDetail = new DomainConfigDetail(
-    'whatever-you-want-to-crawl.com', //domainNameIdentifier
-    20, //requiredControllerCount
-    null, //maximunDepthLevel
-    self.createAgentSet("HTTP_AGENT"), //agentSet
-    { //requestConfig
-      followRedirect : true,
-      timeout : 15000
-    },
-    [ //handleableDomainNamePatterns
-      /whatever-you-want-to-crawl\.com/g
-    ]
-  );
-  domainConfigDetailList.push(aProxyConfigDetail);
+      'whatever-you-want-to-crawl.com', //domainNameIdentifier
+      4, //requiredControllerCount
+      null, //maximunDepthLevel
+      //self.createAgentSet("HTTP_AGENT"), //agentSet
+      self.createAgentSet("DEFAULT_HTTP_PROXY_AGENT"), //agentSet
+      { //requestConfig
+        followRedirect : true,
+        timeout : 15000
+      },
+      [ //handleableDomainNamePatterns
+        /whatever-you-want-to-crawl\.com/g
+      ],
+      [ //seedURLs
+        "http://www.whatever-you-want-to-crawl.com/",
+      ]
+    );
+    domainConfigDetailList.push(aProxyConfigDetail);
+
 
 
   self.setDomainDetialArray(domainConfigDetailList);

@@ -202,11 +202,12 @@ var async              = require('async');
 // up_while_timeout(1);
 // up_while_timeout(1);
 // //up_setinterval_timeout();
-// var url = require('url')
-// var Qs  = require('qs')
+var url = require('url')
+var Qs  = require('qs')
 
-// var urls="http://www.gatherproxy.com/#/proxylist/country/?c=Republic%20of%20Korea#2"
-// var urlParse = url.parse(urls, true);
+var urls="http://www.gatherproxy.com/proxylist/country/?c=Republic%20of%20Korea#2"
+var urlParse = url.resolve(urls, null);
+console.log(urlParse)
 
 // console.log(urlParse.hash)
 // console.log(urlParse.search)
@@ -235,15 +236,15 @@ var async              = require('async');
 // });
 
 // console.log("test")
-console.log("11111111111")
-function a(){
-  return co(function*(){
-    return "111111"
-  }).catch(function(err){
-    console.log(err)
-    console.log(err.stack)
-  })
-}
-console.log(a())
-console.log("aaaaaaa")
+// console.log("11111111111")
+// function a(){
+//   return co(function*(){
+//     return "111111"
+//   }).catch(function(err){
+//     console.log(err)
+//     console.log(err.stack)
+//   })
+// }
+// console.log(a())
+// console.log("aaaaaaa")
 

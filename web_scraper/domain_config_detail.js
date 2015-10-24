@@ -1,6 +1,11 @@
+/* jshint node: true, esnext:true */
+'use strict';
 var config = rootRequire('config');
+var URLRequestSeeder  = rootRequire("web_scraper/url_request_seeder");
 
-function DomainConfigDetail(domainNameIdentifier, requiredControllerCountInProcess,maximunDepthLevel,agentSet,requestConfig, handleableDomainNamePatterns) {
+function DomainConfigDetail(domainNameIdentifier, requiredControllerCountInProcess,maximunDepthLevel,agentSet,requestConfig, handleableDomainNamePatterns,seedURLs) {
+  var self = this;
+
   var isValidDomainName = /^.+\..+/g.test(domainNameIdentifier);
   if(!isValidDomainName){
     throw new Error("domainNameIdentifier expects x.x string pattern, but given " + domainNameIdentifier);
@@ -25,6 +30,10 @@ function DomainConfigDetail(domainNameIdentifier, requiredControllerCountInProce
     throw new Error("handleableDomainNamePatterns expects at least one pattern");
   }
 
+  if(!Array.isArray(seedURLs) && typeof seedURLs != 'string' && seedURLs !== null && seedURLs !== undefined){
+    throw new Error("seedURLs expects array of url, url, null or undefined, but given " + seedURLs);
+  }
+
   requiredControllerCountInProcess = requiredControllerCountInProcess || 1;
 
   Object.defineProperty(this,'domainNameIdentifier',{value:domainNameIdentifier,enumerable:true});
@@ -33,7 +42,26 @@ function DomainConfigDetail(domainNameIdentifier, requiredControllerCountInProce
   Object.defineProperty(this,'agentSet',{value:agentSet,enumerable:true});
   Object.defineProperty(this,'requestConfig',{value:requestConfig,enumerable:true,configurable:true});
   Object.defineProperty(this,'handleableDomainNamePatterns',{value:handleableDomainNamePatterns,enumerable:true});
+
+  if(Array.isArray(seedURLs) || typeof seedURLs == 'string'){
+    Object.defineProperty(this,'seedURLs',{value:seedURLs,enumerable:true});
+  }
 }
+
+DomainConfigDetail.prototype.lazySeedURLRequest = function(){
+  var self = this;
+  if(self.seedURLs === undefined){return;}
+
+  if(self.urlRequestSeeder === undefined){
+    self.urlRequestSeeder = new URLRequestSeeder(
+      config.beanstalkd,
+      self.domainNameIdentifier,
+      self.seedURLs
+    );
+  }
+
+  self.urlRequestSeeder.seed();
+};
 
 DomainConfigDetail.prototype.changeRequestConfig = function(newRequestConfig){
   Object.defineProperty(this,'requestConfig',{value:newRequestConfig});

@@ -8,7 +8,7 @@ try {
 	var config = jsyaml.safeLoad(fs.readFileSync(pathToConfig));
 
 	if(!config.hasOwnProperty(NPS_ENV)){
-		throw new Error('"'+ NPS_ENV + '" does not exist in config')
+		throw new Error('"'+ NPS_ENV + '" does not exist in config');
 	}
 
 	var scoped_config = config[NPS_ENV];
@@ -17,6 +17,7 @@ try {
 	}
 
 	module.exports = scoped_config;
+
 } catch (e) {
 	console.log(e);
 }

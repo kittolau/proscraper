@@ -28,9 +28,10 @@ AbstractDomainConfig.prototype.createAgentSet = function(agentType,maxSockets,ht
     agentSet.httpAgent  = new http.Agent();
     agentSet.httpsAgent = new https.Agent();
   }else if(agentType == "DEFAULT_HTTP_PROXY_AGENT"){
-
-    agentSet.httpAgent  = new HttpProxyAgent('http://127.0.0.1:3128');
-    agentSet.httpsAgent = new HttpsProxyAgent('https://127.0.0.1:3128');
+    var httpProxyHostname = config.scraper.default_http_proxy || 'http://127.0.0.1:3128';
+    var httpsProxyHostname = config.scraper.default_http_proxy || 'https://127.0.0.1:3128';
+    agentSet.httpAgent  = new HttpProxyAgent(httpProxyHostname);
+    agentSet.httpsAgent = new HttpsProxyAgent(httpsProxyHostname);
   }else if(agentType == "HTTP_PROXY_AGENT"){
 
     if(httpAgentAugments){
@@ -145,5 +146,7 @@ AbstractDomainConfig.prototype.getRequestConfig = co.wrap(function* (url){
     }
     return domainDetail.getRequestConfig(url);
 });
+
+AbstractDomainConfig.prototype.seedURLRequest = function(){ };
 
 module.exports = AbstractDomainConfig;

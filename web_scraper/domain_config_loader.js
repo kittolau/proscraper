@@ -92,9 +92,6 @@ DomainConfigLoader.prototype.findDomainConfigDetail = co.wrap(function*(domainNa
 
   var domainConfigArray = yield self.domainConfigArray;
 
-
-
-
   for (var i = 0, len = domainConfigArray.length; i < len; i++) {
     var domainConfig = domainConfigArray[i];
     var domainConfigDetail = domainConfig.findDomainConfigDetail(domainNameIdentifier);

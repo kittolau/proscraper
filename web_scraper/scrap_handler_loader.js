@@ -37,8 +37,11 @@ ScrapHandlerLoader.prototype.__bliudScrapHandlers = function (){
         throw new Error("syntax error detected while importing " + scrapHandlerPath);
       }
 
+
+
       var HandlerClass         = require(scrapHandlerPath);
       var isAbstractScrapHandlerSubclass = HandlerClass.prototype instanceof AbstractScrapHandler;
+
       if(!isAbstractScrapHandlerSubclass){
         //skip
         continue;
@@ -51,32 +54,32 @@ ScrapHandlerLoader.prototype.__bliudScrapHandlers = function (){
         handlers.push({'urlPattern':urlPattern, 'handlerClass':HandlerClass});
 
       }else if(Array.isArray(urlPattern)){
-        for (var i = urlPattern.length - 1; i >= 0; i--) {
-          if(urlPattern[i].pattern === undefined){
+        for (var j = urlPattern.length - 1; j >= 0; j--) {
+          if(urlPattern[j].pattern === undefined){
             throw new Error("getHandleableURLPattern() returns object does not contain 'pattern' property");
           }
 
-          if(!urlPattern[i].pattern instanceof RegExp){
+          if(!urlPattern[j].pattern instanceof RegExp){
             throw new Error("getHandleableURLPattern() returns object.pattern is not Regex");
           }
 
-          if(urlPattern[i].scrapFunction === undefined){
+          if(urlPattern[j].scrapFunction === undefined){
             throw new Error("getHandleableURLPattern() returns object does not contain 'scrapFunction' property");
           }
 
-          if(typeof urlPattern[i].scrapFunction != 'string'){
+          if(typeof urlPattern[j].scrapFunction != 'string'){
             throw new Error("getHandleableURLPattern() returns object.scrapFunction is not string");
           }
 
-          if(/^$.+/g.test(urlPattern[i].scrapFunction)){
+          if(/^$.+/g.test(urlPattern[j].scrapFunction)){
             throw new Error("getHandleableURLPattern() returns object.scrapFunction is not mathcing pattern /$.+/g");
           }
 
-          if(typeof HandlerClass.prototype[urlPattern[i].scrapFunction] != 'function'){
-            throw new Error(HandlerClass.constructor.name + " does not have function " + urlPattern[i].scrapFunction);
+          if(typeof HandlerClass.prototype[urlPattern[j].scrapFunction] != 'function'){
+            throw new Error(HandlerClass.constructor.name + " does not have function " + urlPattern[j].scrapFunction);
           }
 
-          handlers.push({'urlPattern':urlPattern[i].pattern, 'handlerClass':HandlerClass});
+          handlers.push({'urlPattern':urlPattern[j].pattern, 'handlerClass':HandlerClass});
         }
       }else{
         throw new Error("expected getHandleableURLPattern() return Regex or {pattern,scrapFunction}, but given " + urlPattern);
