@@ -11,7 +11,7 @@ var WebScraperProcess = rootRequire("web_scraper/web_scraper_process");
 var logger            = rootRequire('service/logger_manager');
 var config            = rootRequire('config');
 
-function setupCronJob(){
+function setupCronJob(workerProcess,domainWhiteList){
   // var job = new CronJob({
   //   cronTime: '* * * * * *',
   //   onTick: function() {
@@ -20,6 +20,10 @@ function setupCronJob(){
   //   start: true,
   //   timeZone: 'Hongkong'
   // });
+  for (var i = domainWhiteList.length - 1; i >= 0; i--) {
+    var domainId = domainWhiteList[i];
+    workerProcess.seedURLRequest(domainId);
+  }
 }
 
 function startUpProcess(workerProcess,pid,controllerCount,domainWhiteList){
@@ -34,18 +38,29 @@ function startUpProcess(workerProcess,pid,controllerCount,domainWhiteList){
   .then(function(){
     workerProcess.up();
   })
+  .then(function(){
+    setupCronJob(workerProcess,domainWhiteList);
+  })
   .catch(function(err){
     logger.error(err);
     logger.error(err.stack);
   });
 }
 
+function evenlyDivideArray(array,portion,totalPortion){
+  var portionSize =  Math.floor( array.length / totalPortion );
+  var sliceStartingIndex = portion * portionSize;
+  var sliceEndIndex = sliceStartingIndex + portionSize;
+  var dividedArray = array.slice(sliceStartingIndex, sliceEndIndex);
+  return dividedArray;
+}
+
 var main = function(){
 
-  var domainWhitList = ["getproxy.jp",'gatherproxy.com','xroxy.com'];
+  var domainWhitList = ['xroxy.com','gatherproxy.com',"getproxy.jp"];
 
+  var numWorkers    = os.cpus().length;
   var workerProcess = null;
-
   process.on('SIGINT', function() {
       logger.warn("\nGracefully shutting down from SIGINT (Ctrl+C)");
       if(workerProcess !== null){
@@ -53,8 +68,6 @@ var main = function(){
       }
       process.exit(0);
   });
-
-  var numWorkers = os.cpus().length;
 
   if(config.scraper.cluster_mode === 1){
     if(cluster.isMaster) {
@@ -108,16 +121,9 @@ var main = function(){
           workerList.splice(popIndex, 1);
           workerList.push(pushWorker);
       });
-
-      setupCronJob();
-
     } else {
 
-      var workerId = process.env.WorkerId;
-      var numberOfDomainProcess =  Math.floor( domainWhitList.length / numWorkers );
-      var sliceStartingIndex = workerId  * numberOfDomainProcess;
-      var sliceEndIndex = sliceStartingIndex + numberOfDomainProcess;
-      var processDomain = domainWhitList.slice(sliceStartingIndex, sliceEndIndex);
+      var processDomain = evenlyDivideArray(domainWhitList,process.env.WorkerId,numWorkers);
 
       startUpProcess(
         workerProcess,
@@ -133,8 +139,6 @@ var main = function(){
       config.scraper.controller_count,
       domainWhitList
     );
-
-    setupCronJob();
   }
 };
 

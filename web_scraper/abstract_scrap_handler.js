@@ -220,7 +220,7 @@ AbstractScrapHandler.prototype.getAllLinksContains = function($, string){
   return res;
 };
 
-AbstractScrapHandler.prototype.tryCrawlWithDepthReset = co.wrap(function*(href,payload,checkBloomFilter){
+AbstractScrapHandler.prototype.tryCrawlWithDepthReset = co.wrap(function*(href,payload,checkBloomFilter,unimportantLevel,delayInSeconds){
 if(checkBloomFilter === undefined || checkBloomFilter === null || checkBloomFilter){
     checkBloomFilter = false;
   }
@@ -233,10 +233,10 @@ if(checkBloomFilter === undefined || checkBloomFilter === null || checkBloomFilt
     return;
   }
 
-  yield this.__putNewResetDepthURLRequest(absolutePath,payload,checkBloomFilter);
+  yield this.__putNewResetDepthURLRequest(absolutePath,payload,checkBloomFilter,unimportantLevel,delayInSeconds);
 });
 
-AbstractScrapHandler.prototype.tryCrawlWithDepth = co.wrap(function*(href,payload,checkBloomFilter){
+AbstractScrapHandler.prototype.tryCrawlWithDepth = co.wrap(function*(href,payload,checkBloomFilter,unimportantLevel,delayInSeconds){
 if(checkBloomFilter === undefined || checkBloomFilter === null || checkBloomFilter){
     checkBloomFilter = false;
   }
@@ -256,10 +256,10 @@ if(checkBloomFilter === undefined || checkBloomFilter === null || checkBloomFilt
     }
   }
 
-  yield this.__putNewDepthURLRequest(absolutePath,payload,checkBloomFilter);
+  yield this.__putNewDepthURLRequest(absolutePath,payload,checkBloomFilter,unimportantLevel,delayInSeconds);
 });
 
-AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBloomFilter){
+AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBloomFilter,unimportantLevel,delayInSeconds){
   if(checkBloomFilter === undefined || checkBloomFilter === null || checkBloomFilter){
     checkBloomFilter = false;
   }
@@ -273,18 +273,18 @@ AbstractScrapHandler.prototype.tryCrawl = co.wrap(function*(href,payload,checkBl
   }
 
   if(this.domainConfigDetail.maximunDepthLevel !== null){
-    if(this.currentUrlRequest.depthLevel >= this.domainConfigDetail.maximunDepthLevel ){
+    if(this.currentUrlRequest.depthLevel >= this.domainConfigDetail.maximunDepthLevel){
      logger.warn("maximun depth reached");
      return;
     }
   }
 
 
-  yield this.__putNewURLRequest(absolutePath,payload,checkBloomFilter);
+  yield this.__putNewURLRequest(absolutePath,payload,checkBloomFilter,unimportantLevel,delayInSeconds);
 });
 
 //if you are sure href must exist
-AbstractScrapHandler.prototype.crawl = co.wrap(function*(href,payload,checkBloomFilter){
+AbstractScrapHandler.prototype.crawl = co.wrap(function*(href,payload,checkBloomFilter,unimportantLevel,delayInSeconds){
   checkBloomFilter = checkBloomFilter || true;
 
   logger.debug("crawl: " + href);
@@ -294,7 +294,7 @@ AbstractScrapHandler.prototype.crawl = co.wrap(function*(href,payload,checkBloom
     throw new Error(href + " is not a valid absolute url, cannot put in to job queue");
   }
 
-  yield this.__putNewURLRequest(absolutePath,payload,checkBloomFilter);
+  yield this.__putNewURLRequest(absolutePath,payload,checkBloomFilter,unimportantLevel,delayInSeconds);
 });
 
 AbstractScrapHandler.prototype.__putNewResetDepthURLRequest = co.wrap(function*(absolutePath,payload,checkBloomFilter){
@@ -315,13 +315,13 @@ AbstractScrapHandler.prototype.__putNewDepthURLRequest = co.wrap(function*(absol
   yield this.beanstalkdClient.putDepthURLRequest(urlRequest);
 });
 
-AbstractScrapHandler.prototype.__putNewURLRequest = co.wrap(function*(absolutePath,payload,checkBloomFilter){
+AbstractScrapHandler.prototype.__putNewURLRequest = co.wrap(function*(absolutePath,payload,checkBloomFilter,unimportantLevel,delayInSeconds){
   if(checkBloomFilter && this._seenURL.test(absolutePath)){
     logger.warn(absolutePath + " may has been visited before");
     return;
   }
   var urlRequest = URLRequest.prototype.__createNewCrawl(absolutePath,payload,this.currentUrlRequest);
-  yield this.beanstalkdClient.putURLRequest(urlRequest);
+  yield this.beanstalkdClient.putURLRequest(urlRequest,unimportantLevel,delayInSeconds);
 });
 
 

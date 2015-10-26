@@ -103,9 +103,9 @@ BeanstalkdManager.prototype.putFailedURLRequest = co.wrap(function* (urlRequest,
 });
 
 BeanstalkdManager.prototype.__putJob = function (payload, priority, delay, ttr){
-  if (typeof(priority) ==='undefined' || priority === null) priority = 1;
-  if (typeof(delay)    ==='undefined' || delay === null) delay = 0;
-  if (typeof(ttr)      ==='undefined' || ttr === null) ttr = 1000;
+  if (priority === undefined || priority === null) priority = 1;
+  if (delay    === undefined || delay === null) delay = 0;
+  if (ttr      === undefined || ttr === null) ttr = 1000;
 
   return this
   .useClientPromise

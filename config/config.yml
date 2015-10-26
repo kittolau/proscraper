@@ -22,7 +22,7 @@ development:
     #  there will be only one WebScraperProcess
     #cluster_mode = 1:
     #  there will be multiple WebScraperProcess in same machine depends on number of CPU
-    cluster_mode: 0
+    cluster_mode: 1
     default_http_proxy: http://10.0.2.2:8888
     default_https_proxy: http://10.0.2.2:8888
   logger:
