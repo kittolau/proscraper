@@ -37,8 +37,9 @@ MongeManager.prototype.upsert = function(collection, key, data){
     {
       $currentDate :{
         update_at: true,
-        "scraper_update_at": { $type: "timestamp" }
+        // "scraper_update_at": { $type: "timestamp" }
       },
+      $setOnInsert:{ create_at: new Date() },
       $set: data
     },
     {upsert:true}

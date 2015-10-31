@@ -39,7 +39,7 @@ development:
     #proxy_port: 3128
   mongo:
     <<: *mongo
-    database: webot_development
+    database: proscraper_development
   beanstalkd:
     <<: *beanstalkd
 
