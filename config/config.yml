@@ -23,8 +23,6 @@ development:
     #cluster_mode = 1:
     #  there will be multiple WebScraperProcess in same machine depends on number of CPU
     cluster_mode: 1
-    default_http_proxy: http://10.0.2.2:8888
-    default_https_proxy: http://10.0.2.2:8888
   logger:
     <<: *logger
     file_log:
@@ -32,11 +30,6 @@ development:
       level: DEBUG
     stdout_log:
       level: DEBUG
-  selenium:
-    type: remote
-    remote_server_path: http://192.168.33.1:4444/wd/hub
-    #proxy_host: 36.238.87.236
-    #proxy_port: 3128
   mongo:
     <<: *mongo
     database: proscraper_development
@@ -51,7 +44,7 @@ production:
     globalMaxSockets: 6
     default_request_timeout_seconds: 5
     #Number of WebScraperController per process
-    controller_count: 30
+    controller_count: 20
     #cluster_mode = 0:
     #  there will be only one WebScraperProcess
     #cluster_mode = 1:
@@ -64,13 +57,8 @@ production:
       level: WARN
     stdout_log:
       level: WARN
-  selenium:
-    type: remote
-    remote_server_path: http://192.168.33.1:4444/wd/hub
-    #proxy_host: 36.238.87.236
-    #proxy_port: 3128
   mongo:
     <<: *mongo
-    database: webot_development
+    database: proscraper_development
   beanstalkd:
     <<: *beanstalkd
