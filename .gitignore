@@ -1,5 +1,5 @@
 /node_modules/**/*
-/log/**/*
+/log/*.log
 /scraped_content/**/*
 /web_scraper/scrap_handler/**/*
 *.sublime-project
